@@ -630,6 +630,23 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
 
     <script>
+
+    // Styles for resource thumbnails (rounded square) — more specific to override FullCalendar defaults
+    var style = document.createElement('style');
+    style.innerHTML = `
+        /* container for our custom resource content */
+        .fc .fc-resource-custom { text-align:center; padding:6px 4px; box-sizing:border-box; }
+        .fc .resource-thumb-wrap { text-align:center; padding-bottom:6px; }
+    .fc .resource-thumb { width:48px; height:48px; object-fit:cover; border-radius:8px !important; border:1px solid rgba(0,0,0,0.08); display:inline-block; }
+    .fc .resource-thumb-below { display:block; margin:6px auto 0; }
+        .fc .resource-title { text-align:center; font-size:13px; padding-top:4px; white-space:normal; line-height:1.1; }
+        /* Ensure resource header area can grow to accommodate thumbnail */
+        .fc .fc-resource { white-space:normal !important; height:auto !important; min-height:64px !important; }
+        .fc .fc-resource .fc-scrollgrid-section { overflow: visible !important; }
+        .fc .fc-col-header-cell { height: auto !important; min-height:64px !important; }
+    `;
+    document.head.appendChild(style);
+
         // Variables globales
         let calendar;
         let pacientesList = [];
@@ -669,6 +686,27 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                 height: 'auto',
                 contentHeight: 600,
                 aspectRatio: 1.8,
+                // Mostrar imagen encima del nombre de cada recurso/modalidad
+                resourceLabelContent: function(arg) {
+                    var img = arg.resource.extendedProps.imagen || arg.resource.imagen || '';
+                    var container = document.createElement('div');
+                    container.className = 'fc-resource-custom';
+                    var titleDiv = document.createElement('div');
+                    titleDiv.className = 'resource-title';
+                    titleDiv.textContent = arg.resource.title || arg.resource.label || '';
+                    container.appendChild(titleDiv);
+                    if (img) {
+                        var wrap = document.createElement('div'); wrap.className = 'resource-thumb-wrap';
+                        var imgel = document.createElement('img'); imgel.className = 'resource-thumb resource-thumb-below';
+                        imgel.src = img;
+                        imgel.alt = arg.resource.title || '';
+                        // hide broken images
+                        imgel.onerror = function(){ this.style.display = 'none'; };
+                        wrap.appendChild(imgel);
+                        container.appendChild(wrap);
+                    }
+                    return { domNodes: [container] };
+                },
                 
                 eventDidMount: function(info) {
                     // Añadir tooltip a cada evento
@@ -708,6 +746,24 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             });
             
             calendar.render();
+
+            // After render, try to inject images into resource headers (robust fallback)
+            setTimeout(function(){
+                try { injectResourceImages(); } catch(e){ console.warn('injectResourceImages error', e); }
+            }, 250);
+
+            // Also re-apply when window resizes or when view changes
+            window.addEventListener('resize', function(){ setTimeout(injectResourceImages, 300); });
+            // Observe calendar mutations (FullCalendar may re-render headers)
+            try {
+                var calEl = calendarEl;
+                var mo = new MutationObserver(function(m){
+                    // debounce
+                    if (window._injectTimeout) clearTimeout(window._injectTimeout);
+                    window._injectTimeout = setTimeout(function(){ injectResourceImages(); }, 150);
+                });
+                mo.observe(calEl, { childList:true, subtree:true });
+            } catch(e){ console.warn('MutationObserver not available', e); }
         }
 
         // Crear tooltip para eventos
@@ -770,6 +826,70 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                 estadoSelect.appendChild(option);
             });
         }
+
+        function injectResourceImages(){
+            if (!calendar) return;
+            // calendar.getResources() is available in FullCalendar v5
+            var resources = [];
+            try { resources = calendar.getResources(); } catch(e){ resources = []; }
+            console.debug('injectResourceImages: resources count', resources.length);
+            var attempts = 0;
+            var maxAttempts = 6;
+
+            function doInject(){
+                attempts++;
+                var injected = 0;
+                resources.forEach(function(res){
+                var img = (res.extendedProps && (res.extendedProps.imagen || res.imagen)) || '';
+                if (!img) return;
+                var id = res.id;
+                // prefer element with data-resource-id
+                var el = document.querySelector('[data-resource-id="'+id+'"]');
+                var usedSelector = null;
+                var tried = [];
+                var selectors = [
+                    '[data-resource-id="'+id+'"]',
+                    '.fc-col-header-cell[data-resource-id="'+id+'"]',
+                    '.fc-resource[data-resource-id="'+id+'"]',
+                    '.fc-resource-area [data-resource-id="'+id+'"]',
+                    '.fc-scroller [data-resource-id="'+id+'"]'
+                ];
+                for (var s=0; s<selectors.length && !el; s++){
+                    tried.push(selectors[s]);
+                    el = document.querySelector(selectors[s]);
+                }
+                // as last resort, try to match by title text inside header/resource nodes
+                if (!el) {
+                    var nodes = document.querySelectorAll('.fc-col-header-cell, .fc-resource, .fc-resource-area, .fc-scroller');
+                    nodes.forEach(function(n){ if (!el && n.textContent && n.textContent.trim().indexOf(res.title) !== -1) el = n; });
+                }
+                if (!el) {
+                    console.debug('injectResourceImages: no element found for resource', id, 'title', res.title, 'tried', tried);
+                    return;
+                }
+                // avoid duplicates
+                if (el.querySelector('.fc-resource-img')) { injected++; return; }
+                var imgEl = document.createElement('img');
+                imgEl.src = img;
+                imgEl.className = 'fc-resource-img';
+                imgEl.style.width = '40px'; imgEl.style.height = '40px'; imgEl.style.objectFit = 'cover'; imgEl.style.borderRadius = '6px'; imgEl.style.display = 'block'; imgEl.style.margin = '6px auto 0';
+                imgEl.onerror = function(){ this.style.display = 'none'; };
+                // try to insert after title-like element if exists
+                var titleCandidate = el.querySelector('.resource-title, .fc-col-header-cell-cushion, .fc-col-header-cell-main, .fc-resource-title');
+                if (titleCandidate && titleCandidate.parentNode) {
+                    titleCandidate.parentNode.insertBefore(imgEl, titleCandidate.nextSibling);
+                } else {
+                    el.appendChild(imgEl);
+                }
+                injected++;
+            });
+                console.debug('injectResourceImages attempt', attempts, 'injected', injected);
+                if (injected === 0 && attempts < maxAttempts) {
+                    setTimeout(doInject, 400 * attempts);
+                }
+            }
+            doInject();
+            }
 
         // Cargar pacientes
         function loadPatients() {

@@ -1,0 +1,12 @@
+/* Shared header styles extracted from index.php */
+:root{--header-bg:#1275a0;}
+.main-header{background:var(--header-bg);color:#fff;height:80px;display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom-left-radius:20px;border-bottom-right-radius:20px;position:fixed;top:0;left:0;right:0;z-index:1050;box-shadow:0 2px 15px rgba(0,0,0,0.1);}
+.header-left{display:flex;align-items:center;gap:15px}
+.header-logo img{max-height:60px}
+.logo-section{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;text-align:center}
+.logo-text{font-size:24px;font-weight:700;color:#fff}
+.user-info{display:flex;align-items:center;gap:8px;color:#fff;background:rgba(255,255,255,0.08);padding:6px 10px;border-radius:6px}
+.header-buttons{display:flex;gap:.5rem}
+.btn-header{color:white;text-decoration:none;font-weight:600;background:none;border:none;padding:.5rem 1rem;cursor:pointer}
+.btn-header:hover{text-decoration:underline;color:#cce7ff}
+@media(max-width:768px){.main-header{padding:15px;height:70px}.header-logo img{max-height:45px}.logo-text{font-size:18px}.user-info{font-size:12px}}

@@ -1,7 +1,9 @@
 <?php
 require_once("../includes/db.php");
+header('Content-Type: application/json; charset=utf-8');
 
-$sql = "SELECT id, nombre FROM agenda_modalidades 
+// Include imagen column (may be NULL) so frontend can render thumbnails
+$sql = "SELECT id, nombre, COALESCE(imagen, '') AS imagen FROM agenda_modalidades 
         ORDER BY 
         CASE 
             WHEN nombre LIKE '%Radiografía%' THEN 1
@@ -34,12 +36,30 @@ while ($row = $result->fetch_assoc()) {
         $color = '#00796b'; // Teal para sonografía
     }
 
+    $img = '';
+    if (isset($row['imagen'])) $img = $row['imagen'];
+    // normalize image path and prefix base path so it works when app is in a subdirectory
+    if ($img && strpos($img, '://') === false) {
+        // Determine application base path. If this script is inside /citas, prefer the parent directory
+        $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+        if (basename($scriptDir) === 'citas') {
+            $appBase = rtrim(dirname($scriptDir), '/');
+        } else {
+            $appBase = $scriptDir;
+        }
+        if ($appBase === '' || $appBase === '/') {
+            $img = '/' . ltrim($img, '/');
+        } else {
+            $img = $appBase . '/' . ltrim($img, '/');
+        }
+    }
     $recursos[] = [
         'id' => $row['id'],
         'title' => $row['nombre'],
-        'eventColor' => $color
+        'eventColor' => $color,
+        'imagen' => $img
     ];
 }
 
 echo json_encode($recursos);
-?>
+// no closing PHP tag to avoid accidental trailing whitespace

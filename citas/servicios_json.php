@@ -51,3 +51,17 @@ try {
     echo json_encode(['error' => 'Error del servidor: ' . $e->getMessage()]);
 }
 ?>
+
+<header class="main-header">
+    <div class="header-right">
+        <div class="header-buttons">
+            <span style="color:white;margin-right:12px;">Bienvenido, <?php echo htmlspecialchars($user_nombre); ?> (<?php echo ucfirst($user_tipo); ?>)</span>
+            <a href="index.php" class="btn-header"><i class="fas fa-calendar"></i> Calendario</a>
+            <a href="javascript:history.back()" class="btn-header"><i class="fas fa-arrow-left"></i> Volver</a>
+            <a href="logout.php" class="btn-header"><i class="fas fa-sign-out-alt"></i> Salir</a>
+        </div>
+    </div>
+    <div class="logo-section">
+        <div class="logo-text">IMAGENOLOGÍA</div>
+    </div>
+</header>

@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 session_start();
 require_once 'includes/db.php';
 
@@ -41,9 +44,22 @@ if ($_POST) {
         $stmt = $conn->prepare("SELECT id, nombre, nombre_usuario, correo, $password_field as password_hash, tipo, $activo_field FROM agenda_usuarios WHERE nombre_usuario = ?");
         $stmt->bind_param("s", $usuario);
         $stmt->execute();
-        $result = $stmt->get_result();
+        $stmt->store_result();
         
-        if ($user = $result->fetch_assoc()) {
+        if ($stmt->num_rows > 0) {
+            $stmt->bind_result($id, $nombre, $nombre_usuario, $correo, $password_hash, $tipo, $activo);
+            $stmt->fetch();
+            
+            $user = [
+                'id' => $id,
+                'nombre' => $nombre,
+                'nombre_usuario' => $nombre_usuario,
+                'correo' => $correo,
+                'password_hash' => $password_hash,
+                'tipo' => $tipo,
+                'activo' => $activo
+            ];
+            
             if (!$user['activo']) {
                 $error = 'Usuario desactivado. Contacte al administrador.';
             } elseif (password_verify($password, $user['password_hash'])) {
@@ -53,8 +69,8 @@ if ($_POST) {
                 $_SESSION['usuario_usuario'] = $user['nombre_usuario'];
                 $_SESSION['usuario_correo'] = $user['correo'];
                 $_SESSION['usuario_tipo'] = $user['tipo'];
-                
-                header('Location: index.php');
+
+                header('Location: https://ha.angelescuauhtemoc.com/Agenda/agenda/index.php');
                 exit;
             } else {
                 $error = 'Nombre de usuario o contraseña incorrectos';
@@ -371,12 +387,7 @@ if ($_POST) {
             <p>¿No tienes cuenta? <a href="registro.php">Regístrate aquí</a></p>
         </div>
         
-        <div class="credentials-box">
-            <strong>Credenciales de prueba:</strong><br>
-            <strong>Admin:</strong> usuario: admin, contraseña: admin123<br>
-            <strong>Caja:</strong> usuario: sandra, contraseña: sandra123<br>
-            <strong>Doctor:</strong> usuario: doctor, contraseña: doctor123
-        </div>
+       
     </div>
     
     <script>

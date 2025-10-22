@@ -118,7 +118,48 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             background: rgba(255,255,255,0.1);
             padding: 8px 12px;
             border-radius: 6px;
+    }
+
+    /* Variable-controlled slot height for responsive spacing */
+    :root { --fc-slot-height: 40px; }
+
+    /* Apply variable to FullCalendar timegrid slots and axis labels */
+    .fc .fc-timegrid-slot,
+    .fc .fc-timegrid-slot-lane,
+    .fc .fc-timegrid-slot .fc-timegrid-slot-lane {
+      height: var(--fc-slot-height) !important;
+      min-height: var(--fc-slot-height) !important;
+      line-height: var(--fc-slot-height) !important;
+    }
+
+    .fc .fc-timegrid-axis .fc-timegrid-slot-label {
+      height: var(--fc-slot-height) !important;
+      line-height: var(--fc-slot-height) !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
         }
+    /* Hover highlight for timegrid cells */
+    .fc .fc-timegrid-slot-lane:hover,
+    .fc .fc-timegrid-slot:hover {
+      background-color: rgba(0, 123, 255, 0.06) !important; /* light blue */
+      cursor: pointer;
+    }
+
+    /* Small tooltip that shows the time on hover */
+    .fc-timecell-tooltip {
+      position: fixed;
+      z-index: 12000;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      padding: 6px 8px;
+      font-size: 12px;
+      color: #333;
+      border-radius: 6px;
+      pointer-events: none;
+      display: none;
+    }
         
         .user-type {
             font-size: 12px;
@@ -129,6 +170,17 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             display: flex;
             gap: 0.5rem;
         }
+
+    /* Layout for main calendar + sidebar (mini calendars) */
+    .calendar-layout { display:flex; gap:12px; align-items:flex-start; }
+    .calendar-main { flex: 1 1 auto; min-width: 300px; }
+    .calendar-side { width: 320px; flex: 0 0 320px; }
+    .resizer { width: 8px; cursor: col-resize; background: transparent; }
+    .resizer:hover { background: rgba(0,0,0,0.05); }
+
+    /* Make mini calendars smaller */
+    .mini-calendar { max-width: 280px; font-size: 12px; }
+
         
         /* Mobile Menu Button */
         .mobile-menu-btn {
@@ -709,7 +761,8 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         
         /* Mejorar visibilidad de la línea de tiempo */
         .fc-timegrid-slot {
-            position: relative;
+      position: relative;
+      padding: 0 !important;
         }
         
         .fc-timegrid-now-indicator-container {
@@ -882,6 +935,20 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         .fc-timegrid-axis {
             background: #f8f9fa !important;
         }
+
+    /* Eliminar renglones extra entre intervalos (ajustar altura/padding) */
+    .fc-timegrid-slot-lane, .fc-timegrid-slot, .fc-timegrid-slot > div {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      line-height: 1 !important;
+      height: auto !important;
+      min-height: 0 !important;
+    }
+    /* Asegurar que el eje horario no agregue espacio extra */
+    .fc-timegrid-axis .fc-timegrid-axis-day-frame, .fc-timegrid-axis .fc-timegrid-axis-slot {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
         
         .fc-header-toolbar {
             margin-bottom: 1.5rem !important;
@@ -1101,59 +1168,138 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                 order: 1;
             }
         }
+
+        /* Injected CSS for resource thumbnails */
+        .fc .fc-resource .fc-resource-img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
+            margin: 0 auto 6px;
+        }
+        .fc .fc-resource {
+            min-height: 64px !important;
+            text-align: center;
+        }
+
+        /* Add a dropdown for time range selection in the top-right corner */
+        .time-range-selector {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        
+        .time-range-selector label {
+            margin-right: 5px;
+            font-size: 14px;
+            color: #374151;
+        }
+        
+        .time-range-selector select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #374151;
+            background: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .time-range-selector select:hover {
+            border-color: #1275a0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .time-range-selector select:focus {
+            outline: none;
+            border-color: #1275a0;
+            box-shadow: 0 0 0 3px rgba(18, 117, 160, 0.1);
+        }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="main-header">
-        <div class="header-left">
-            <button class="mobile-menu-btn" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
+  <!-- Header -->
+  <header class="main-header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+      </button>
             
-            <div class="header-logo">
-                <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles">
-            </div>
+      <div class="header-logo">
+        <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles">
+      </div>
             
-            <div class="user-info">
-                <i class="fas fa-user-circle"></i>
-                <span><?php echo htmlspecialchars($user_nombre); ?></span>
-                <span class="user-type">(<?php echo ucfirst($user_tipo); ?>)</span>
-            </div>
-        </div>
+      <div class="user-info">
+        <i class="fas fa-user-circle"></i>
+        <span><?php echo htmlspecialchars($user_nombre); ?></span>
+        <span class="user-type">(<?php echo ucfirst($user_tipo); ?>)</span>
+      </div>
+    </div>
         
-        <div class="logo-section">
-            <div class="logo-text">IMAGENOLOGÍA</div>
-        </div>
+    <div class="logo-section">
+      <div class="logo-text">IMAGENOLOGÍA</div>
+    </div>
         
-        <div class="header-right">
-            <div class="header-buttons">
-                <?php if ($puede_gestionar_usuarios): ?>
-                    <a href="admin_usuarios.php" class="btn-header">
-                        <i class="fas fa-users-cog"></i> Admin
-                    </a>
-                    <button onclick="abrirCatalogo()" class="btn-header">
-                        <i class="fas fa-list"></i> Catálogo
-                    </button>
-                <?php endif; ?>
-                <a href="cliente.php" class="btn-header">
-                    <i class="fas fa-user-friends"></i> Vista Cliente
-                </a>
-                <?php if ($puede_crear_citas): ?>
-                    <button onclick="abrirModalAgendar()" class="btn-header">
-                        <i class="fas fa-plus"></i> Nueva Cita
-                    </button>
-                <?php endif; ?>
-                <a href="logout.php" class="btn-header">
-                    <i class="fas fa-sign-out-alt"></i> Salir
-                </a>
-            </div>
-        </div>
-    </header>
+    <div class="header-right">
+      <div class="header-buttons">
+        <?php if ($puede_gestionar_usuarios): ?>
+          <a href="panel_admin.php" class="btn-header">
+            <i class="fas fa-users-cog"></i> Admin
+          </a>
+          <button onclick="abrirCatalogo()" class="btn-header">
+            <i class="fas fa-list"></i> Catálogo
+          </button>
+        <?php endif; ?>
+        <a href="cliente.php" class="btn-header">
+          <i class="fas fa-user-friends"></i> Vista Cliente
+        </a>
+        <a href="reporte.php" class="btn-header">
+          <i class="fas fa-file-alt"></i> Reporte
+        </a>
+        <?php if ($puede_crear_citas): ?>
+          <button onclick="abrirModalAgendar()" class="btn-header">
+            <i class="fas fa-plus"></i> Nueva Cita
+          </button>
+        <?php endif; ?>
+        <a href="logout.php" class="btn-header">
+          <i class="fas fa-sign-out-alt"></i> Salir
+        </a>
+      </div>
+    </div>
+  </header>
 
-    <!-- Main Content -->
-    <!-- Sidebar Overlay for Mobile -->
-    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+  <!-- Sidebar Overlay for Mobile -->
+  <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- Modal Imprimir -->
+  <div class="modal fade" id="modalImprimir" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Imprimir calendario</h5>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="im_modalidad">Modalidad</label>
+            <select id="im_modalidad" class="form-control">
+              <option value="all">Todas</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="im_fecha">Fecha</label>
+            <input id="im_fecha" class="form-control" type="date" value="<?= date('Y-m-d') ?>">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="imprimirSeleccion()">Imprimir / Descargar PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
     
     <div class="main-content">
         <!-- Sidebar -->
@@ -1327,6 +1473,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
               <div style="margin-bottom:16px;">
                 <label style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Correo electrónico:</label>
                 <input type="email" id="nuevoPacienteCorreo" placeholder="correo@ejemplo.com" 
+                       style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+              </div>
+
+              <div style="margin-bottom:16px;">
+                <label style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Diagnóstico o motivo del estudio:</label>
+                <textarea id="nuevoPacienteDiagnostico" placeholder="Describe el motivo del estudio o diagnóstico..." 
                        style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
               </div>
 
@@ -1551,6 +1703,44 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.8/index.global.min.js"></script>
   <script>
+    // Helper para fetch JSON con debug (muestra texto si no es JSON)
+    function fetchJsonDebug(url) {
+      return fetch(url).then(function(r) {
+        return r.text().then(function(text) {
+          // Trim possible UTF-8 BOM
+          if (text && text.charCodeAt(0) === 0xFEFF) {
+            text = text.slice(1);
+          }
+
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            // If the response is HTML that contains JSON somewhere, try to extract the first JSON-like substring
+            var cleaned = text;
+            if (cleaned.indexOf('<') !== -1) {
+              // Heurística: buscar el primer '[' o '{' y la última ']' o '}'
+              var firstIdx = Math.max(cleaned.indexOf('{'), cleaned.indexOf('['));
+              var lastIdx = Math.max(cleaned.lastIndexOf('}'), cleaned.lastIndexOf(']'));
+              if (firstIdx !== -1 && lastIdx !== -1 && lastIdx > firstIdx) {
+                var candidate = cleaned.substring(firstIdx, lastIdx + 1);
+                try {
+                  return JSON.parse(candidate);
+                } catch (e2) {
+                  // fallthrough: we'll rethrow the original error below with extra info
+                }
+              }
+            }
+
+            console.error('Failure parsing JSON from', url, 'status', r.status, 'responseText (truncated 1000):', (text||'').slice(0,1000));
+            var err = new Error('Failure parsing JSON');
+            err.responseText = text;
+            err.status = r.status;
+            throw err;
+          }
+        });
+      });
+    }
+
     // Paciente autocompletar y registro
     let pacientesList = [];
     let pacienteInput = document.getElementById('agendarPaciente');
@@ -1645,6 +1835,8 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           }
         });
       } else {
+
+
         alert('Por favor ingresa nombre y apellido del paciente.');
       }
     };
@@ -1655,9 +1847,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
 
     // -- Calendarios y demás lógica --
     function cargarProfesionales() {
-      fetch('recursos_json.php')
-        .then(r => r.json())
-        .then(data => {
+      // Use the citas path and a debug parser to avoid HTML/login pages breaking JSON.parse
+      fetchJsonDebug('citas/recursos_json.php')
+        .then(function(data) {
           const select = document.getElementById('profesional-select');
           select.innerHTML = '';
           // Opción 'Todos'
@@ -1672,6 +1864,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             opt.textContent = item.title;
             select.appendChild(opt);
           });
+        })
+        .catch(function(err) {
+          console.error('Error cargando profesionales:', err);
         });
     }
     cargarProfesionales();
@@ -1699,6 +1894,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     cargarEstados();
 
     document.addEventListener('DOMContentLoaded', function() {
+
       function cargarServiciosPorModalidad(modalidadId) {
         var servicioSelect = document.getElementById('agendarServicio');
         servicioSelect.innerHTML = '';
@@ -1780,16 +1976,18 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         cargarServiciosPorModalidad(modalidadId);
         // Filtrar recursos en el calendario
         if (modalidadId === 'todos') {
-          calendar.setOption('resources', 'recursos_json.php');
+          calendar.setOption('resources', function(fetchInfo, successCallback, failureCallback) {
+            fetchJsonDebug('citas/recursos_json.php').then(successCallback).catch(failureCallback);
+          });
         } else {
-          fetch('recursos_json.php')
-            .then(r => r.json())
+          fetchJsonDebug('citas/recursos_json.php')
             .then(data => {
-              const recurso = data.find(item => item.id == modalidadId);
+              const recurso = data.find(item => String(item.id) == String(modalidadId));
               if (recurso) {
                 calendar.setOption('resources', [recurso]);
               }
-            });
+            })
+            .catch(function(err){ console.error('Error fetching recursos for filter:', err); });
         }
       });
 
@@ -1961,7 +2159,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         formData.append('cita_id', citaId);
         formData.append('estado', nuevoEstado);
         
-        fetch('actualizar_estado.php', {
+        fetch('actualizar_estado_clean.php', {
           method: 'POST',
           body: formData
         })
@@ -1994,16 +2192,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             
             // Mostrar mensaje de éxito
             var successMsg = document.createElement('div');
-            successMsg.style.cssText = `
-              position: fixed; top: 20px; right: 20px; z-index: 100000;
-              background: #4CAF50; color: white; padding: 12px 20px;
-              border-radius: 4px; font-family: Roboto, sans-serif;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            `;
-            successMsg.textContent = `Estado actualizado a: ${nuevoEstado}`;
+            successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 100000; background: #4CAF50; color: white; padding: 12px 20px; border-radius: 4px; font-family: Roboto, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
+            successMsg.textContent = 'Estado actualizado a: ' + nuevoEstado;
             document.body.appendChild(successMsg);
             
-            setTimeout(() => {
+            setTimeout(function() {
               if (successMsg.parentNode) {
                 document.body.removeChild(successMsg);
               }
@@ -2022,7 +2215,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             alert('Error al actualizar el estado: ' + (data.error || 'Error desconocido'));
           }
         })
-        .catch(error => {
+        .catch(function(error) {
           console.error('Error:', error);
           
           // Restablecer el tooltip si aún existe
@@ -2220,7 +2413,17 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
         initialView: 'resourceTimeGridDay',
         locale: 'es',
-        resources: 'recursos_json.php',
+        // Load resources via callback to use our debug parser and handle errors
+        resources: function(fetchInfo, successCallback, failureCallback) {
+          fetchJsonDebug('citas/recursos_json.php')
+            .then(function(data) {
+              successCallback(data);
+            })
+            .catch(function(err) {
+              console.error('Failed to load resources (recursos_json):', err);
+              failureCallback(err);
+            });
+        },
         events: 'citas_json.php',
         
         // Configuración de recursos para evitar solapamiento de nombres
@@ -2228,7 +2431,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         resourceAreaColumns: [
           {
             field: 'title',
-            headerContent: 'Modalidades',
+            headerContent: function() {
+              const headerDiv = document.createElement('div');
+              headerDiv.textContent = 'Modalidades';
+              return headerDiv;
+            },
             width: window.innerWidth <= 768 ? '180px' : (window.innerWidth <= 480 ? '140px' : '250px')
           }
         ],
@@ -2236,24 +2443,29 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           // Mostrar nombres completos sin abreviaciones
           var title = arg.resource.title;
           
-          // Crear elemento con mejor formato
-          var element = document.createElement('div');
-          element.textContent = title;
-          element.style.cssText = `
-            line-height: 1.3;
-            padding: 2px 0;
-            word-break: break-word;
-            hyphens: auto;
-          `;
-          
-          return { domNodes: [element] };
+          // Crear contenedor con título e imagen (si existe)
+          var img = arg.resource.extendedProps && (arg.resource.extendedProps.imagen || arg.resource.imagen) || '';
+          var container = document.createElement('div');
+          container.style.cssText = 'text-align:left; padding:4px 6px; box-sizing:border-box;';
+          var titleEl = document.createElement('div');
+          titleEl.textContent = title;
+          titleEl.style.cssText = 'line-height:1.2; font-size:13px; word-break:break-word;';
+          container.appendChild(titleEl);
+          if (img) {
+            var imgEl = document.createElement('img');
+            imgEl.src = img;
+            imgEl.alt = title;
+            imgEl.style.cssText = 'width:40px;height:40px;object-fit:cover;border-radius:6px;display:block;margin-top:6px;';
+            imgEl.className = 'fc-resource-img';
+            imgEl.onerror = function(){ this.style.display = 'none'; };
+            container.appendChild(imgEl);
+          }
+          return { domNodes: [container] };
         },
-        // ...sin eventDidMount personalizado...
-    /* ...sin tooltip personalizado... */
         headerToolbar: {
           left: 'prev,next today',
           center: 'title',
-          right: 'resourceTimeGridDay,listWeek'
+          right: 'resourceTimeGridDay,listWeek,rangoTiempo'
         },
         buttonText: {
           today: 'Hoy',
@@ -2263,19 +2475,57 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           resourceTimeGridDay: 'Día',
           resourceTimeGridWeek: 'Semana'
         },
+        // Custom button for Rango de Tiempo (appears in header toolbar)
+        customButtons: {
+          rangoTiempo: {
+            text: 'Rango',
+            click: function() {
+              var rangoSeleccionado = prompt('Seleccione el rango de tiempo: 15, 30, 60 minutos', '30');
+              if (rangoSeleccionado === '15' || rangoSeleccionado === '30' || rangoSeleccionado === '60') {
+                var opcion = '00:' + rangoSeleccionado + ':00';
+                // Set both the slot duration and the label interval so labels show sub-intervals (e.g. 07:15, 07:45)
+                calendar.setOption('slotDuration', opcion);
+                calendar.setOption('slotLabelInterval', opcion);
+                // Force label format to always show minutes (HH:MM)
+                calendar.setOption('slotLabelFormat', { hour: '2-digit', minute: '2-digit' });
+                alert('Rango de tiempo actualizado a ' + rangoSeleccionado + ' minutos.');
+                // If a fallback button exists in resource area, remove it to avoid duplicates
+                try { var fb = document.getElementById('btnRangoTiempo'); if (fb) fb.remove(); } catch(e){}
+              } else {
+                alert('Rango de tiempo no válido.');
+              }
+            }
+          }
+        },
         slotMinTime: "07:00:00",
         slotMaxTime: "23:59:00",
-        slotDuration: "00:30:00",
+  slotDuration: "00:30:00",
+  // Make the label interval match the slot duration by default and show minutes
+  slotLabelInterval: '00:30:00',
+  slotLabelFormat: { hour: '2-digit', minute: '2-digit' },
         allDaySlot: false, // Quitar la fila de All Day
         nowIndicator: true, // Mostrar línea de tiempo actual
         height: "100vh",
-        selectable: false, // DESACTIVAR selectable para evitar conflictos
+  selectable: true, // Allow selecting multiple contiguous slots for bookings
         // select: function(info) {
         //   lastDateClickInfo = info;
         //   contextMenu.style.display = 'block';
         //   contextMenu.style.left = info.jsEvent.pageX + 'px';
         //   contextMenu.style.top = info.jsEvent.pageY + 'px';
         // },
+        select: function(selectionInfo) {
+          // selectionInfo contains start and end Date objects when user selects multiple slots
+          lastDateClickInfo = selectionInfo;
+          // Pre-fill booking modal with selection
+          var fecha = selectionInfo.start.toISOString().split('T')[0];
+          var horaInicio = selectionInfo.start.toTimeString().substring(0,5);
+          var horaFin = (selectionInfo.end) ? selectionInfo.end.toTimeString().substring(0,5) : '';
+          document.getElementById('agendarFecha').value = fecha;
+          document.getElementById('agendarHoraInicio').value = horaInicio;
+          if (document.getElementById('agendarHoraFin')) document.getElementById('agendarHoraFin').value = horaFin;
+          // Open the booking modal
+          document.getElementById('modalAgendar').style.display = 'flex';
+        },
         dateClick: function(info) {
           // Mejorar detección de eventos con múltiples selectores
           var target = info.jsEvent.target;
@@ -2294,7 +2544,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             contextMenu.style.top = info.jsEvent.pageY + 'px';
           }
         },
-        // Agregar eventClick como backup en caso de que eventDidMount no funcione
+  // Agregar eventClick como backup en caso de que eventDidMount no funcione
         eventClick: function(info) {
 
           
@@ -2312,30 +2562,289 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           abrirModalEditarCita(info.event);
           return false;
         },
+  viewDidMount: function() {
+          function iniciarObservador(attempt) {
+            attempt = attempt || 0;
+            // intentos máximos para evitar bucles infinitos
+            var MAX_ATTEMPTS = 12;
+
+            // probar varios selectores que podrían contener las columnas/recursos
+            var selectors = [
+              '.fc-resource-area',
+              '.fc-scroller .fc-resource-area',
+              '.fc-scroller',
+              '.fc-resource',
+              '.fc-resource-timegrid',
+              '[data-resource-id]'
+            ];
+
+            var resourceContainer = null;
+            for (var i = 0; i < selectors.length; i++) {
+              resourceContainer = document.querySelector(selectors[i]);
+              if (resourceContainer) break;
+            }
+
+            // Si el botón ya está en el DOM, adjuntar inmediatamente y salir
+            var existingBtn = document.getElementById('btnRangoTiempo');
+            if (existingBtn) {
+              if (!existingBtn.dataset.rangoListener) {
+                console.log('Botón btnRangoTiempo encontrado en el DOM (inmediato).');
+                existingBtn.addEventListener('click', function() {
+                  var rangoSeleccionado = prompt('Seleccione el rango de tiempo: 15, 30, 60 minutos', '30');
+                  if (rangoSeleccionado === '15' || rangoSeleccionado === '30' || rangoSeleccionado === '60') {
+                    calendar.setOption('slotDuration', '00:' + rangoSeleccionado + ':00');
+                    alert('Rango de tiempo actualizado a ' + rangoSeleccionado + ' minutos.');
+                  } else {
+                    alert('Rango de tiempo no válido.');
+                  }
+                });
+                existingBtn.dataset.rangoListener = '1';
+              }
+              return; // ya tenemos lo que necesitamos
+            }
+
+            if (resourceContainer) {
+              var observer = new MutationObserver(function(mutationsList, observerRef) {
+                mutationsList.forEach(function(mutation) {
+                  if (mutation.type === 'childList') {
+                    var btnRangoTiempo = document.getElementById('btnRangoTiempo');
+                    if (btnRangoTiempo) {
+                      if (!btnRangoTiempo.dataset.rangoListener) {
+                        console.log('Botón btnRangoTiempo encontrado en el DOM.');
+                        btnRangoTiempo.addEventListener('click', function() {
+                          var rangoSeleccionado = prompt('Seleccione el rango de tiempo: 15, 30, 60 minutos', '30');
+                          if (rangoSeleccionado === '15' || rangoSeleccionado === '30' || rangoSeleccionado === '60') {
+                            calendar.setOption('slotDuration', '00:' + rangoSeleccionado + ':00');
+                            alert('Rango de tiempo actualizado a ' + rangoSeleccionado + ' minutos.');
+                          } else {
+                            alert('Rango de tiempo no válido.');
+                          }
+                        });
+                        btnRangoTiempo.dataset.rangoListener = '1';
+                      }
+                      observerRef.disconnect(); // Dejar de observar una vez que se encuentra el botón
+                    }
+                  }
+                });
+              });
+
+              // Iniciar el observador en el contenedor de recursos
+              observer.observe(resourceContainer, { childList: true, subtree: true });
+            } else {
+              attempt++;
+              if (attempt <= MAX_ATTEMPTS) {
+                console.warn('No se encontró el contenedor de recursos. Reintentando... (intento ' + attempt + '/' + MAX_ATTEMPTS + ')');
+                setTimeout(function() { iniciarObservador(attempt); }, 500);
+              } else {
+                console.error('No se encontró el contenedor de recursos tras ' + MAX_ATTEMPTS + ' intentos. Abortando observador.');
+              }
+            }
+          }
+
+          iniciarObservador(0);
+        },
       });
-      calendar.render();
+  calendar.render();
+  // Ensure the Rango de Tiempo button exists (fallback if headerContent not rendered)
+      // No fallback insertion: use the header toolbar custom button 'rangoTiempo'.
+      // Keep the observer logic above to wire any existing #btnRangoTiempo (if present from older code) by attaching listeners.
+      // Inject CSS for resource thumbnails
+      (function(){
+        var style = document.createElement('style');
+        style.innerHTML = '\n+          .fc .fc-resource .fc-resource-img { width:40px; height:40px; object-fit:cover; border-radius:50%; display:block; margin:0 auto 6px; }\n+          .fc .fc-resource { min-height:64px !important; text-align:center; }\n+        ';
+        document.head.appendChild(style);
+      })();
+
+      // Inject images for resources after render (fallback)
+      function injectResourceImagesIndex(){
+        try{ var resources = calendar.getResources(); } catch(e){ resources = []; }
+        resources.forEach(function(res){
+          var img = (res.extendedProps && (res.extendedProps.imagen || res.imagen)) || '';
+          if (!img) return;
+          var id = res.id;
+          var el = document.querySelector('[data-resource-id="'+id+'"]');
+          if (!el) el = document.querySelector('.fc-col-header-cell[data-resource-id="'+id+'"]');
+          if (!el) return;
+          if (el.querySelector('.fc-resource-img')) return;
+          var imgEl = document.createElement('img'); imgEl.src = img; imgEl.className = 'fc-resource-img'; imgEl.onerror = function(){ this.style.display='none'; };
+          el.appendChild(imgEl);
+        });
+      }
+      setTimeout(injectResourceImagesIndex, 300);
+      try{ new MutationObserver(function(){ setTimeout(injectResourceImagesIndex,150); }).observe(document.getElementById('calendar'), { childList:true, subtree:true }); } catch(e){}
       
       // Actualizar marcadores cuando se carguen los eventos
       setTimeout(function() {
         actualizarMarcadoresMiniCalendarios();
       }, 1000);
+
+      // Wrap calendar area and sidebar into a resizable layout (if not already present)
+      (function(){
+        var calRoot = document.getElementById('calendar');
+        if (!calRoot) return;
+        var parent = calRoot.parentNode;
+        // if already wrapped, skip
+        if (parent && parent.classList && parent.classList.contains('calendar-main')) return;
+
+        var layout = document.createElement('div'); layout.className = 'calendar-layout';
+        var main = document.createElement('div'); main.className = 'calendar-main';
+        var side = document.createElement('div'); side.className = 'calendar-side';
+        var res = document.createElement('div'); res.className = 'resizer';
+
+        // move calendar into main
+        parent.replaceChild(layout, calRoot);
+        main.appendChild(calRoot);
+        layout.appendChild(main);
+        layout.appendChild(res);
+
+        // create sidebar placeholder (existing mini calendars will be moved here by other code if any)
+        side.id = 'calendarSidebar';
+        layout.appendChild(side);
+
+        // Basic drag to resize
+        var isDown = false; var startX=0; var startWidth=0;
+        res.addEventListener('mousedown', function(e){ isDown=true; startX=e.clientX; startWidth = side.offsetWidth; document.body.style.cursor='col-resize'; e.preventDefault(); });
+        window.addEventListener('mouseup', function(){ if (isDown) { isDown=false; document.body.style.cursor='auto'; } });
+        window.addEventListener('mousemove', function(e){ if (!isDown) return; var dx = e.clientX - startX; var newW = Math.max(160, Math.min(600, startWidth - dx)); side.style.width = newW + 'px'; });
+      })();
+
+      // Create small floating tooltip for time labels on hover
+      (function(){
+        var tip = document.createElement('div');
+        tip.className = 'fc-timecell-tooltip';
+        tip.id = 'fc-timecell-tooltip';
+        document.body.appendChild(tip);
+
+        function formatTimeFromLabel(labelEl) {
+          if (!labelEl) return '';
+          var text = labelEl.textContent || labelEl.innerText || '';
+          return text.trim();
+        }
+
+        function attachSlotListeners(root) {
+          if (!root) return;
+          var slots = root.querySelectorAll('.fc-timegrid-slot, .fc-timegrid-slot-lane');
+          slots.forEach(function(slot){
+            if (slot.dataset._hasHover) return;
+            slot.dataset._hasHover = '1';
+            slot.addEventListener('mouseenter', function(e){
+              // Try to derive time from the axis label in the same row
+              var row = slot.closest('.fc-timegrid-slot');
+              var label = null;
+              // look for preceding axis label
+              var axis = document.querySelector('.fc-timegrid-axis');
+              if (axis) {
+                // find label nearest by y position
+                var labels = axis.querySelectorAll('.fc-timegrid-slot-label');
+                for (var i=0;i<labels.length;i++){
+                  var r = labels[i].getBoundingClientRect();
+                  var s = slot.getBoundingClientRect();
+                  if (Math.abs(r.top - s.top) < 6) { label = labels[i]; break; }
+                }
+              }
+              var txt = formatTimeFromLabel(label) || slot.getAttribute('data-time') || '';
+              var tipEl = document.getElementById('fc-timecell-tooltip');
+              if (txt) {
+                tipEl.textContent = txt;
+                tipEl.style.display = 'block';
+                tipEl.style.left = (e.clientX + 12) + 'px';
+                tipEl.style.top = (e.clientY + 12) + 'px';
+              }
+            });
+            slot.addEventListener('mousemove', function(e){
+              var tipEl = document.getElementById('fc-timecell-tooltip');
+              if (tipEl && tipEl.style.display === 'block') {
+                tipEl.style.left = (e.clientX + 12) + 'px';
+                tipEl.style.top = (e.clientY + 12) + 'px';
+              }
+            });
+            slot.addEventListener('mouseleave', function(){
+              var tipEl = document.getElementById('fc-timecell-tooltip');
+              if (tipEl) tipEl.style.display = 'none';
+            });
+          });
+        }
+
+        // Observe calendar for slot cells creation
+        try {
+          var mo = new MutationObserver(function(muts){
+            muts.forEach(function(m){
+              if (m.addedNodes && m.addedNodes.length) {
+                m.addedNodes.forEach(function(n){
+                  if (!(n instanceof HTMLElement)) return;
+                  if (n.matches && (n.matches('.fc-timegrid-slot') || n.matches('.fc-timegrid-slot-lane') || n.querySelector('.fc-timegrid-slot'))) {
+                    // attach in a tick
+                    setTimeout(function(){ attachSlotListeners(document.getElementById('calendar')); }, 50);
+                  }
+                });
+              }
+            });
+          });
+          mo.observe(document.getElementById('calendar'), { childList:true, subtree:true });
+          // initial attach
+          setTimeout(function(){ attachSlotListeners(document.getElementById('calendar')); }, 200);
+        } catch(e) { console.warn('slot observer failed', e); }
+      })();
       
       // Botón para vista tipo lista
       var btnVistaLista = document.getElementById('btnVistaLista');
       if (btnVistaLista) {
-        btnVistaLista.addEventListener('click', function() {
-          calendar.changeView('listWeek');
-        });
+                        if (!btnRangoTiempo.dataset.rangoListener) {
+                            console.log('Botón btnRangoTiempo encontrado en el DOM.');
+                            btnRangoTiempo.addEventListener('click', function() {
+                                var rangoSeleccionado = prompt('Seleccione el rango de tiempo: 15, 30, 60 minutos', '30');
+                                if (rangoSeleccionado === '15' || rangoSeleccionado === '30' || rangoSeleccionado === '60') {
+                                    var opcion = '00:' + rangoSeleccionado + ':00';
+                                    calendar.setOption('slotDuration', opcion);
+                                    calendar.setOption('slotLabelInterval', opcion);
+                                    calendar.setOption('slotLabelFormat', { hour: '2-digit', minute: '2-digit' });
+                                    // adjust slot heights after changing the duration
+                                    if (typeof adjustSlotHeights === 'function') adjustSlotHeights();
+                                    alert('Rango de tiempo actualizado a ' + rangoSeleccionado + ' minutos.');
+                                } else {
+                                    alert('Rango de tiempo no válido.');
+                                }
+                            });
+                            btnRangoTiempo.dataset.rangoListener = '1';
+                        }
       }
-      // Botón para volver a vista calendario
-      var btnVistaCalendario = document.getElementById('btnVistaCalendario');
-      if (btnVistaCalendario) {
-        btnVistaCalendario.addEventListener('click', function() {
-          calendar.changeView('resourceTimeGridDay');
-        });
+      // Función para ajustar la altura de los slots según el intervalo y el espacio disponible
+      function adjustSlotHeights() {
+        try {
+          var slotDur = calendar.getOption('slotDuration') || '00:30:00';
+          var parts = slotDur.split(':');
+          var mins = (parseInt(parts[0],10) || 0) * 60 + (parseInt(parts[1],10) || 0);
+          if (!mins || mins <= 0) mins = 30;
+          var minTime = calendar.getOption('slotMinTime') || '07:00:00';
+          var maxTime = calendar.getOption('slotMaxTime') || '23:59:00';
+          function toMinutes(t) {
+            var p = (t || '00:00:00').split(':'); return (parseInt(p[0],10)||0)*60 + (parseInt(p[1],10)||0);
+          }
+          var totalMinutes = Math.max(60, toMinutes(maxTime) - toMinutes(minTime));
+          var slots = Math.max(1, Math.floor(totalMinutes / mins));
+          var calendarEl = document.getElementById('calendar');
+          var headerH = (calendarEl.querySelector('.fc-header-toolbar') && calendarEl.querySelector('.fc-header-toolbar').offsetHeight) || 80;
+          // Reserve some space for resource column headers and paddings
+          var reserved = 120;
+          var available = calendarEl.clientHeight - headerH - reserved;
+          if (available <= 0) available = window.innerHeight - headerH - reserved;
+          var slotHeight = Math.max(28, Math.floor(available / slots));
+          document.documentElement.style.setProperty('--fc-slot-height', slotHeight + 'px');
+          if (typeof calendar.updateSize === 'function') calendar.updateSize();
+        } catch (e) {
+          console.warn('adjustSlotHeights error', e);
+        }
       }
-      calendar.render();
-      
+
+      // Debounced resize handler
+      var _adjustSlotHeightsTimeout = null;
+      window.addEventListener('resize', function() {
+        if (_adjustSlotHeightsTimeout) clearTimeout(_adjustSlotHeightsTimeout);
+        _adjustSlotHeightsTimeout = setTimeout(function(){ if (typeof adjustSlotHeights === 'function') adjustSlotHeights(); }, 180);
+      });
+
+      // Initial adjust after render
+      setTimeout(function(){ if (typeof adjustSlotHeights === 'function') adjustSlotHeights(); }, 150);
       // Función para actualizar la línea de tiempo actual
       function actualizarLineaTiempo() {
         // Forzar actualización del indicador de tiempo actual
@@ -2351,6 +2860,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       calendar.on('viewDidMount', function() {
         setTimeout(actualizarLineaTiempo, 100);
       });
+          // Ensure slot heights are correct after view mounts
+          if (typeof adjustSlotHeights === 'function') {
+              // small timeout to let layout settle
+              setTimeout(adjustSlotHeights, 120);
+          }
 
       document.getElementById('profesional-select').addEventListener('change', function() {
         calendar.refetchEvents();
@@ -2433,7 +2947,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
       };
 
-      // FECHA Y HORA DEFAULT SEGÚN CALENDARIO
+      // FECHA Y HORA DEFAULT SEGUN CALENDARIO
       agendarBtn.onclick = function() {
         contextMenu.style.display = 'none';
         var fecha = '';
@@ -2536,10 +3050,85 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     });
 
     // Funciones para botones del header
-    function abrirModalAgendar() {
-        // Aquí iría la lógica para abrir el modal de agendar
-        alert('Función de agendar cita en desarrollo');
+  function abrirModalAgendar() {
+    var modal = document.getElementById('modalAgendar');
+    var pacienteInput = document.getElementById('agendarPaciente');
+    var registroBox = document.getElementById('registroPacienteBox');
+    var fechaInput = document.getElementById('agendarFecha');
+    var horaInicioInput = document.getElementById('agendarHoraInicio');
+    var horaFinInput = document.getElementById('agendarHoraFin');
+
+    // Reset patient selection / registro box
+    if (pacienteInput) {
+      pacienteInput.value = '';
+      pacienteInput.removeAttribute('data-paciente-id');
     }
+    if (registroBox) registroBox.style.display = 'none';
+
+    // Determine default date/time: prefer lastDateClickInfo (set by calendar), otherwise now rounded to 30m
+    var fecha = '';
+    var horaInicio = '';
+    if (typeof lastDateClickInfo !== 'undefined' && lastDateClickInfo && lastDateClickInfo.date) {
+      var d = lastDateClickInfo.date instanceof Date ? lastDateClickInfo.date : new Date(lastDateClickInfo.date);
+      fecha = d.toISOString().split('T')[0];
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      horaInicio = hh + ':' + mm;
+    } else {
+      var now = new Date();
+      var mins = now.getMinutes();
+      var add = mins % 30 === 0 ? 0 : (30 - (mins % 30));
+      now.setMinutes(now.getMinutes() + add);
+      fecha = now.toISOString().split('T')[0];
+      horaInicio = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    }
+
+    if (fechaInput) fechaInput.value = fecha;
+    if (horaInicioInput) horaInicioInput.value = horaInicio;
+
+    // Set default hora fin using calcularHoraFin if available, default 30 minutes
+    try {
+      var durDefault = 30;
+      var servicioSelect = document.getElementById('agendarServicio');
+      var sel = servicioSelect && servicioSelect.options[servicioSelect.selectedIndex];
+      var durAttr = sel ? sel.getAttribute('data-duracion') : null;
+      var dur = durAttr ? parseInt(durAttr) : durDefault;
+      if (horaFinInput) horaFinInput.value = calcularHoraFin(horaInicio, dur);
+    } catch (e) {
+      if (horaFinInput) horaFinInput.value = '';
+    }
+
+    // If a modalidad is selected in the sidebar, pre-populate services and label
+    var modalidadSelect = document.getElementById('profesional-select');
+    if (modalidadSelect) {
+      var modalidadId = modalidadSelect.value;
+      if (modalidadId && modalidadId !== 'todos') {
+        document.getElementById('agendarProfesional').value = modalidadId;
+        var label = document.getElementById('modalidadSeleccionadaLabel');
+        if (label) label.textContent = modalidadSelect.selectedOptions[0].textContent || 'Seleccionar modalidad';
+        // Load services for that modalidad
+        cargarServiciosPorModalidad(modalidadId);
+      } else {
+        // Clear servicios select
+        var servicioSelect = document.getElementById('agendarServicio');
+        if (servicioSelect) {
+          servicioSelect.innerHTML = '<option value="">Seleccione un servicio</option>';
+        }
+        var label = document.getElementById('modalidadSeleccionadaLabel');
+        if (label) label.textContent = 'Seleccionar modalidad';
+      }
+    }
+
+    // Show modal and focus patient input
+    if (modal) {
+      modal.style.display = 'flex';
+      setTimeout(function() {
+        if (pacienteInput) pacienteInput.focus();
+      }, 200);
+    } else {
+      alert('No se encontró el modal de agendar (modalAgendar) en la página.');
+    }
+  }
     
     // Funciones para sidebar responsivo
     function toggleSidebar() {
@@ -2634,7 +3223,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       formData.append('hora_fin', horaFin);
       formData.append('estado_id', estadoId);
       
-      fetch('actualizar_cita.php', {
+      fetch('actualizar_cita_clean.php', {
         method: 'POST',
         body: formData
       })
@@ -2643,7 +3232,14 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         if (resp.success) {
           alert('Cita actualizada correctamente.');
           document.getElementById('modalEditarCita').style.display = 'none';
-          calendar.refetchEvents();
+          
+          // Recargar eventos del calendario
+          if (calendar && typeof calendar.refetchEvents === 'function') {
+            calendar.refetchEvents();
+          } else {
+            // Fallback: recargar la página
+            location.reload();
+          }
         } else {
           alert('Error al actualizar cita: ' + (resp.error || ''));
         }

@@ -1,22 +1,36 @@
 <?php
-session_start();
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 header('Content-Type: application/json');
-require_once("includes/db.php");
-require_once 'includes/auth.php';
 
-// Verificar que el usuario esté logueado y tenga permisos
-if (!isset($_SESSION['usuario_id'])) {
-    echo json_encode(["success" => false, "error" => "Sesión no válida"]);
+// Limpiar cualquier output previo
+ob_clean();
+
+try {
+    require_once("includes/db.php");
+} catch (Exception $e) {
+    echo json_encode(["success" => false, "error" => "Error conexión DB"]);
     exit;
 }
 
-if (!puedeRealizar('cambiar_estados')) {
-    echo json_encode(["success" => false, "error" => "Sin permisos para cambiar estados"]);
-    exit;
+$cita_id = $_POST['cita_id'] ?? '';
+$estado_id = $_POST['estado_id'] ?? '';
+
+if ($cita_id && $estado_id && is_numeric($cita_id) && is_numeric($estado_id)) {
+    $cita_id = intval($cita_id);
+    $estado_id = intval($estado_id);
+    
+    $sql = "UPDATE agenda_citas SET estado_id = $estado_id WHERE id = $cita_id";
+    
+    if ($conn->query($sql)) {
+        echo json_encode(["success" => true, "message" => "Estado actualizado"]);
+    } else {
+        echo json_encode(["success" => false, "error" => "Error SQL"]);
+    }
+} else {
+    echo json_encode(["success" => false, "error" => "Datos inválidos"]);
 }
+
+exit;
+?>
 
 $cita_id = $_POST['cita_id'] ?? '';
 $nuevo_estado = $_POST['estado'] ?? '';

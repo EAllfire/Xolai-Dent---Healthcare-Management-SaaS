@@ -1,5 +1,6 @@
 <?php
 require_once("includes/db.php");
+header('Content-Type: application/json; charset=utf-8');
 
 $sql = "SELECT id, CONCAT(nombre, ' ', apellido) as nombre FROM portal_pacientes ORDER BY nombre";
 $result = $conn->query($sql);
@@ -13,4 +14,4 @@ while ($row = $result->fetch_assoc()) {
 }
 
 echo json_encode($pacientes);
-?>
+// no closing PHP tag

@@ -1,5 +1,6 @@
 <?php
 require_once("../includes/db.php");
+header('Content-Type: application/json; charset=utf-8');
 
 $sql = "SELECT c.id, c.fecha, c.hora_inicio, c.hora_fin, c.modalidad_id, c.estado_id, e.nombre AS estado,
     p.nombre AS paciente, p.tipo AS tipo_paciente, p.telefono, p.alergias AS diagnostico,
@@ -43,4 +44,4 @@ while ($row = $result->fetch_assoc()) {
 }
 
 echo json_encode($eventos);
-?>
+// no closing PHP tag to avoid accidental trailing whitespace
