@@ -2678,34 +2678,44 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         actualizarMarcadoresMiniCalendarios();
       }, 1000);
 
-      // Wrap calendar area and sidebar into a resizable layout (if not already present)
+      // Ensure the calendar occupies the full calendar-area width and remove any
+      // previously injected right column / resizer (#calendarSidebar and .resizer).
       (function(){
         var calRoot = document.getElementById('calendar');
         if (!calRoot) return;
+
+        // Remove injected calendarSidebar if present
+        var injectedSidebar = document.getElementById('calendarSidebar');
+        if (injectedSidebar && injectedSidebar.parentNode) {
+          injectedSidebar.parentNode.removeChild(injectedSidebar);
+        }
+
+        // Remove any injected resizer elements
+        var injectedResizers = document.querySelectorAll('.calendar-layout .resizer, .resizer');
+        injectedResizers.forEach(function(r){ if (r && r.parentNode) r.parentNode.removeChild(r); });
+
+        // If the calendar was wrapped inside a .calendar-main within a .calendar-layout,
+        // unwrap it so it returns to its original container (.calendar-area)
         var parent = calRoot.parentNode;
-        // if already wrapped, skip
-        if (parent && parent.classList && parent.classList.contains('calendar-main')) return;
-
-        var layout = document.createElement('div'); layout.className = 'calendar-layout';
-        var main = document.createElement('div'); main.className = 'calendar-main';
-        var side = document.createElement('div'); side.className = 'calendar-side';
-        var res = document.createElement('div'); res.className = 'resizer';
-
-        // move calendar into main
-        parent.replaceChild(layout, calRoot);
-        main.appendChild(calRoot);
-        layout.appendChild(main);
-        layout.appendChild(res);
-
-        // create sidebar placeholder (existing mini calendars will be moved here by other code if any)
-        side.id = 'calendarSidebar';
-        layout.appendChild(side);
-
-        // Basic drag to resize
-        var isDown = false; var startX=0; var startWidth=0;
-        res.addEventListener('mousedown', function(e){ isDown=true; startX=e.clientX; startWidth = side.offsetWidth; document.body.style.cursor='col-resize'; e.preventDefault(); });
-        window.addEventListener('mouseup', function(){ if (isDown) { isDown=false; document.body.style.cursor='auto'; } });
-        window.addEventListener('mousemove', function(e){ if (!isDown) return; var dx = e.clientX - startX; var newW = Math.max(160, Math.min(600, startWidth - dx)); side.style.width = newW + 'px'; });
+        if (parent && parent.classList && parent.classList.contains('calendar-main')) {
+          var layout = parent.parentNode;
+          if (layout && layout.classList && layout.classList.contains('calendar-layout')) {
+            var container = layout.parentNode;
+            if (container) {
+              // Replace the layout with the calendar element
+              container.replaceChild(calRoot, layout);
+            }
+          }
+        }
+        // Finally ensure the calendar's immediate parent has the expected class
+        var finalParent = calRoot.parentNode;
+        if (finalParent && finalParent.classList && !finalParent.classList.contains('calendar-area')) {
+          // Try to find the .calendar-area and move the calendar there
+          var desired = document.querySelector('.calendar-area');
+          if (desired && desired !== finalParent) {
+            desired.appendChild(calRoot);
+          }
+        }
       })();
 
       // Create small floating tooltip for time labels on hover
