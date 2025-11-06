@@ -38,17 +38,10 @@ $show_mobile_menu = $show_mobile_menu ?? true;
     <div class="header-right">
         <div class="header-buttons">
             <?php if ($show_admin_tools): ?>
-                <a href="admin_usuarios.php" class="btn-header"><i class="fas fa-users-cog"></i> Admin</a>
-                <a href="catalogo_servicios.php" class="btn-header"><i class="fas fa-list"></i> Catálogo</a>
-                <a href="admin_modalidades.php" class="btn-header"><i class="fas fa-layer-group"></i> Modalidades</a>
+                <a href="panel_admin.php" class="btn-header"><i class="fas fa-users-cog"></i> Admin</a>
             <?php endif; ?>
 
-            <a href="cliente.php" class="btn-header"><i class="fas fa-user-friends"></i> Vista Cliente</a>
             <a href="reporte.php" class="btn-header"><i class="fas fa-file-alt"></i> Reporte</a>
-
-            <?php if (!empty($puede_crear_citas)): ?>
-                <button onclick="if(window.abrirModalAgendar) abrirModalAgendar();" class="btn-header"><i class="fas fa-plus"></i> Nueva Cita</button>
-            <?php endif; ?>
 
             <?php if ($show_calendar): ?>
                 <a href="index.php" class="btn-header"><i class="fas fa-calendar"></i> Calendario</a>

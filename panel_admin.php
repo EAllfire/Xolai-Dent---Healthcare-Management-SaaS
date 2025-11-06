@@ -151,7 +151,6 @@ $show_admin_tools = $puede_gestionar_usuarios;
 <!-- Header (from index.php design) -->
 <header class="main-header">
   <div class="header-left">
-    <button class="mobile-menu-btn" onclick="if(window.toggleSidebar) toggleSidebar();"><i class="fas fa-bars"></i></button>
     <div class="header-logo">
       <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles">
     </div>
@@ -167,17 +166,12 @@ $show_admin_tools = $puede_gestionar_usuarios;
   <div class="header-right">
     <div class="header-buttons">
       <?php if ($show_admin_tools): ?>
-        <a href="admin_usuarios.php" class="btn-header"><i class="fas fa-users-cog"></i> Admin</a>
-        <a href="catalogo_servicios.php" class="btn-header"><i class="fas fa-list"></i> Catálogo</a>
-        <a href="admin_modalidades.php" class="btn-header"><i class="fas fa-layer-group"></i> Modalidades</a>
+   
       <?php endif; ?>
 
-      <a href="cliente.php" class="btn-header"><i class="fas fa-user-friends"></i> Vista Cliente</a>
       <a href="reporte.php" class="btn-header"><i class="fas fa-file-alt"></i> Reporte</a>
 
-      <?php if (!empty($puede_crear_citas)): ?>
-        <button onclick="if(window.abrirModalAgendar) abrirModalAgendar();" class="btn-header"><i class="fas fa-plus"></i> Nueva Cita</button>
-      <?php endif; ?>
+     
 
       <?php if ($show_calendar): ?>
         <a href="index.php" class="btn-header"><i class="fas fa-calendar"></i> Calendario</a>
@@ -193,12 +187,21 @@ $show_admin_tools = $puede_gestionar_usuarios;
 </header>
 
 <main>
+  <div class="text-center mb-4">
+    <a href="index.php" class="btn btn-secondary"><i class="fas fa-calendar-alt"></i> Volver al Calendario</a>
+  </div>
   <div class="panel-legend">Panel de administración — elija una sección para gestionar</div>
   <div class="admin-grid">
     <a href="catalogo_servicios.php" class="admin-card" title="Catálogo de servicios">
       <i class="fa-solid fa-list"></i>
       <span>Catálogo</span>
       <small style="color:#6b7280;margin-top:8px">Gestionar servicios y paquetes</small>
+    </a>
+
+    <a href="catalogo_pacientes.php" class="admin-card" title="Catálogo de pacientes">
+      <i class="fa-solid fa-hospital-user"></i>
+      <span>Pacientes</span>
+      <small style="color:#6b7280;margin-top:8px">Gestionar la base de datos de pacientes</small>
     </a>
 
     <a href="admin_modalidades.php" class="admin-card" title="Modalidades">

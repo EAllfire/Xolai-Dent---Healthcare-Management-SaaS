@@ -5,7 +5,15 @@ require_once 'includes/auth.php';
 // set header behavior for admin users page
 $show_calendar = true;
 $show_back = false;
+$show_mobile_menu = false;
+
+// Obtener información del usuario actual para el header
+$user_nombre = $_SESSION['usuario_nombre'] ?? 'Usuario';
+$user_tipo = $_SESSION['usuario_tipo'] ?? 'usuario';
+
+error_log("DEBUG: Including header.php");
 include_once __DIR__ . '/includes/header.php';
+error_log("DEBUG: Header included. User Name: " . ($user_nombre ?? 'N/A') . ", User Type: " . ($user_tipo ?? 'N/A'));
 
 // Solo admins pueden acceder a este panel
 if (!puedeRealizar('gestionar_usuarios')) {
@@ -13,16 +21,24 @@ if (!puedeRealizar('gestionar_usuarios')) {
     exit;
 }
 
-// Obtener información del usuario actual para el header
-$user_nombre = $_SESSION['usuario_nombre'] ?? 'Usuario';
-$user_tipo = $_SESSION['usuario_tipo'] ?? 'usuario';
-
 // Permisos (coincidente con index.php)
 $puede_crear_citas = in_array($user_tipo, ['admin', 'caja']);
 $puede_gestionar_usuarios = ($user_tipo === 'admin');
 
 $error = '';
 $success = '';
+
+if (isset($_GET['success'])) {
+    if ($_GET['success'] == 'update') {
+        $success = 'Usuario actualizado exitosamente.';
+    }
+    if ($_GET['success'] == 'delete') {
+        $success = 'Usuario eliminado exitosamente.';
+    }
+    if ($_GET['success'] == 'create') {
+        $success = 'Usuario creado exitosamente.';
+    }
+}
 
 // Procesar eliminación de usuario
 if ($_POST && isset($_POST['eliminar_usuario'])) {
@@ -33,7 +49,8 @@ if ($_POST && isset($_POST['eliminar_usuario'])) {
         $stmt->bind_param("i", $usuario_id);
         
         if ($stmt->execute()) {
-            $success = 'Usuario eliminado exitosamente.';
+            header('Location: admin_usuarios.php?success=delete');
+            exit;
         } else {
             $error = 'Error al eliminar el usuario.';
         }
@@ -47,40 +64,32 @@ if ($_POST && isset($_POST['eliminar_usuario'])) {
 if ($_POST && isset($_POST['editar_usuario'])) {
     $usuario_id = intval($_POST['usuario_id']);
     $nombre = trim($_POST['nombre'] ?? '');
-    $email = trim($_POST['email'] ?? '');
     $tipo = $_POST['tipo'] ?? '';
     $cambiar_password = !empty($_POST['password']);
     
-    if ($usuario_id && $nombre && $email && $tipo) {
-        // Verificar si el correo ya existe en otro usuario
-        $stmt = $conn->prepare("SELECT id FROM agenda_usuarios WHERE correo = ? AND id != ?");
-        $stmt->bind_param("si", $email, $usuario_id);
-        $stmt->execute();
-        $stmt->store_result();
-        
-        if ($stmt->num_rows > 0) {
-            $error = 'El correo ya está registrado por otro usuario';
-        } else {
-            if ($cambiar_password) {
-                $password = $_POST['password'];
-                if (strlen($password) < 6) {
-                    $error = 'La contraseña debe tener al menos 6 caracteres';
-                } else {
-                    // Usar password con hash
-                    $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $conn->prepare("UPDATE agenda_usuarios SET nombre = ?, correo = ?, tipo = ?, password = ? WHERE id = ?");
-                    $stmt->bind_param("ssssi", $nombre, $email, $tipo, $password_hash, $usuario_id);
-                }
+    if ($usuario_id && $nombre && $tipo) {
+        if ($cambiar_password) {
+            $password = $_POST['password'];
+            if (strlen($password) < 6) {
+                $error = 'La contraseña debe tener al menos 6 caracteres';
             } else {
-                $stmt = $conn->prepare("UPDATE agenda_usuarios SET nombre = ?, correo = ?, tipo = ? WHERE id = ?");
-                $stmt->bind_param("sssi", $nombre, $email, $tipo, $usuario_id);
+                $password_hash = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("UPDATE agenda_usuarios SET nombre = ?, tipo = ?, password = ? WHERE id = ?");
+                $stmt->bind_param("sssi", $nombre, $tipo, $password_hash, $usuario_id);
             }
-            
-            if (!isset($error) && $stmt->execute()) {
-                $success = 'Usuario actualizado exitosamente.';
-            } elseif (!isset($error)) {
-                $error = 'Error al actualizar el usuario.';
-            }
+        } else {
+            $stmt = $conn->prepare("UPDATE agenda_usuarios SET nombre = ?, tipo = ? WHERE id = ?");
+            $stmt->bind_param("ssi", $nombre, $tipo, $usuario_id);
+        }
+        
+        error_log("DEBUG: Editing user - ID: " . $usuario_id . ", Nombre: " . $nombre . ", Tipo: " . $tipo . ", Cambiar Password: " . ($cambiar_password ? 'Yes' : 'No'));
+        if (!isset($error) && $stmt->execute()) {
+            error_log("DEBUG: User update successful for ID: " . $usuario_id);
+            header('Location: admin_usuarios.php?success=update');
+            exit;
+        } elseif (!isset($error)) {
+            $error = 'Error al actualizar el usuario: ' . $stmt->error;
+            error_log("ERROR: User update failed for ID: " . $usuario_id . " - " . $stmt->error);
         }
         $stmt->close();
     } else {
@@ -91,38 +100,41 @@ if ($_POST && isset($_POST['editar_usuario'])) {
 // Procesar creación de usuario genérico (admin, caja, lectura)
 if ($_POST && isset($_POST['crear_usuario'])) {
     $nombre = trim($_POST['nombre'] ?? '');
-    $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $tipo = $_POST['tipo'] ?? 'lectura';
 
-    if ($nombre && $email && $password) {
+    if ($nombre && $password) {
         if (strlen($password) < 6) {
             $error = 'La contraseña debe tener al menos 6 caracteres';
         } else {
-            // verificar email único
-            $stmt = $conn->prepare("SELECT id FROM agenda_usuarios WHERE correo = ?");
-            $stmt->bind_param("s", $email);
-            $stmt->execute();
-            $stmt->store_result();
-            if ($stmt->num_rows > 0) {
-                $error = 'El correo ya está registrado';
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            $nombre_usuario = strtolower(str_replace(' ', '', $nombre)) . rand(10,99);
+            
+            // Generar un correo electrónico único para cumplir con la restricción de la base de datos
+            $email = 'user_' . $nombre_usuario . '@generated.com';
+
+            $stmt2 = $conn->prepare("INSERT INTO agenda_usuarios (nombre, nombre_usuario, correo, password, tipo) VALUES (?, ?, ?, ?, ?)");
+            $stmt2->bind_param('sssss', $nombre, $nombre_usuario, $email, $password_hash, $tipo);
+            
+            if ($stmt2->execute()) {
+                header('Location: admin_usuarios.php?success=create');
+                exit;
             } else {
-                $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                $nombre_usuario = strtolower(str_replace(' ', '', $nombre)) . rand(10,99);
-                $stmt2 = $conn->prepare("INSERT INTO agenda_usuarios (nombre, nombre_usuario, correo, password, tipo) VALUES (?, ?, ?, ?, ?)");
-                $stmt2->bind_param('sssss', $nombre, $nombre_usuario, $email, $password_hash, $tipo);
-                if ($stmt2->execute()) {
-                    $success = 'Usuario creado: ' . $nombre_usuario;
-                    // refresh users list
-                    $result = $conn->query("SELECT id, nombre, correo, tipo FROM agenda_usuarios ORDER BY tipo DESC, nombre ASC");
-                    $usuarios = [];
-                    while ($row = $result->fetch_assoc()) { $usuarios[] = $row; }
+                // Si el correo generado ya existe (muy poco probable), intentar con uno nuevo
+                if ($stmt2->errno == 1062) { // Error de entrada duplicada
+                    $email = 'user_' . $nombre_usuario . '_' . time() . '@generated.com';
+                    $stmt2->bind_param('sssss', $nombre, $nombre_usuario, $email, $password_hash, $tipo);
+                    if ($stmt2->execute()) {
+                        header('Location: admin_usuarios.php?success=create');
+                        exit;
+                    } else {
+                        $error = 'Error al crear usuario: ' . $stmt2->error;
+                    }
                 } else {
                     $error = 'Error al crear usuario: ' . $stmt2->error;
                 }
-                $stmt2->close();
             }
-            $stmt->close();
+            $stmt2->close();
         }
     } else {
         $error = 'Por favor complete todos los campos';
@@ -148,7 +160,8 @@ if ($_POST && isset($_POST['crear_tipo'])) {
             $stmt2 = $conn->prepare("INSERT INTO agenda_usuarios (nombre, nombre_usuario, correo, password, tipo) VALUES (?, ?, ?, ?, ?)");
             $stmt2->bind_param('sssss', $nombre, $nombre_usuario, $email, $password_hash, $tipo_nuevo);
             if ($stmt2->execute()) {
-                $success = 'Usuario creado: ' . $nombre_usuario;
+                header('Location: admin_usuarios.php?success=create');
+                exit;
             } else {
                 $error = 'Error al crear usuario: ' . $stmt2->error;
             }
@@ -177,17 +190,15 @@ while ($row = $result->fetch_assoc()) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/header.css">
+    <style>
+        body {
+            padding-top: 90px; /* Ajuste para el header fijo */
+        }
+    </style>
 </head>
 <body>
-    <?php
-    // include shared header, on admin pages we may want back button hidden and calendar visible
-    $show_calendar = true;
-    $show_back = false;
-    $show_mobile_menu = false;
-    include __DIR__ . '/includes/header.php';
-    ?>
-
     <div class="container mt-4">
+        <a href="panel_admin.php" class="btn btn-secondary mb-3">Volver al Panel</a>
         <div class="row">
             <div class="col-md-5">
                 <div class="card p-3">
@@ -201,20 +212,16 @@ while ($row = $result->fetch_assoc()) {
 
                     <form method="POST">
                         <div class="form-group">
-                            <label>Nombre completo</label>
-                            <input name="nombre" class="form-control" required>
+                            <label for="nombre_crear">Nombre completo</label>
+                            <input id="nombre_crear" name="nombre" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label>Correo</label>
-                            <input name="email" type="email" class="form-control" required>
+                            <label for="password_crear">Contraseña</label>
+                            <input id="password_crear" name="password" type="password" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label>Contraseña</label>
-                            <input name="password" type="password" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Rol</label>
-                            <select name="tipo" class="form-control" required>
+                            <label for="tipo_crear">Rol</label>
+                            <select id="tipo_crear" name="tipo" class="form-control" required>
                                 <option value="lectura">Solo Lectura</option>
                                 <option value="caja">Caja</option>
                                 <option value="admin">Administrador</option>
@@ -231,14 +238,17 @@ while ($row = $result->fetch_assoc()) {
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead>
-                                <tr><th>Nombre</th><th>Correo</th><th>Rol</th></tr>
+                                <tr><th>Nombre</th><th>Rol</th><th>Acciones</th></tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($usuarios as $usuario): ?>
                                     <tr>
                                         <td><?= htmlspecialchars($usuario['nombre']) ?></td>
-                                        <td><?= htmlspecialchars($usuario['correo']) ?></td>
                                         <td><?= htmlspecialchars($usuario['tipo']) ?></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info" onclick="editarUsuario(<?= $usuario['id'] ?>, '<?= htmlspecialchars($usuario['nombre']) ?>', '<?= htmlspecialchars($usuario['tipo']) ?>')">Editar</button>
+                                            <button class="btn btn-sm btn-danger" onclick="eliminarUsuario(<?= $usuario['id'] ?>, '<?= htmlspecialchars($usuario['nombre']) ?>')">Eliminar</button>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -249,10 +259,83 @@ while ($row = $result->fetch_assoc()) {
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <!-- Modal Editar -->
+    <div class="modal fade" id="modalEditar" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Editar Usuario</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form method="POST">
+              <input type="hidden" name="usuario_id" id="edit_usuario_id">
+              <div class="form-group">
+                <label for="edit_usuario_nombre">Nombre</label>
+                <input type="text" name="nombre" id="edit_usuario_nombre" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="edit_usuario_tipo">Tipo</label>
+                <select name="tipo" id="edit_usuario_tipo" class="form-control" required>
+                  <option value="lectura">Solo Lectura</option>
+                  <option value="caja">Caja</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="edit_password">Nueva Contraseña (dejar en blanco para no cambiar)</label>
+                <input id="edit_password" type="password" name="password" class="form-control">
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                <button type="submit" name="editar_usuario" class="btn btn-primary">Guardar Cambios</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Eliminar -->
+    <div class="modal fade" id="modalEliminar" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">Eliminar Usuario</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>¿Estás seguro de que quieres eliminar al usuario <strong id="delete_usuario_nombre"></strong>?</p>
+            <form method="POST">
+              <input type="hidden" name="usuario_id" id="delete_usuario_id">
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="submit" name="eliminar_usuario" class="btn btn-danger">Eliminar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+
+    <script>
+        function editarUsuario(id, nombre, tipo) {
+            document.getElementById('edit_usuario_id').value = id;
+            document.getElementById('edit_usuario_nombre').value = nombre;
+            var tipoSelect = document.getElementById('edit_usuario_tipo');
+            for (var i = 0; i < tipoSelect.options.length; i++) {
+                if (tipoSelect.options[i].value == tipo) {
+                    tipoSelect.options[i].selected = true;
+                    break;
+                }
+            }
             $('#modalEditar').modal('show');
         }
         

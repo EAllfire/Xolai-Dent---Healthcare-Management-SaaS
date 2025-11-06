@@ -10,7 +10,7 @@ $id = intval($data['id'] ?? 0);
 if ($id <= 0) { echo json_encode(['success'=>false,'error'=>'ID inválido']); exit; }
 
 // Optionally: check foreign key references (citas table). We'll attempt to delete only if there are no citas for this modalidad.
-$check = $conn->prepare("SELECT COUNT(*) as total FROM citas WHERE modalidad_id = ?");
+$check = $conn->prepare("SELECT COUNT(*) as total FROM agenda_citas WHERE modalidad_id = ?");
 if ($check) {
     $check->bind_param('i', $id);
     $check->execute();

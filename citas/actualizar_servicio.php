@@ -43,13 +43,13 @@ try {
         throw new Exception("La duración debe estar entre 5 y 180 minutos");
     }
     
-    // Verificar que el servicio existe
+    // Verificar que el servicio existe (compatible con sistemas sin mysqlnd)
     $stmt_check = $conn->prepare("SELECT id FROM portal_servicios WHERE id = ?");
     $stmt_check->bind_param("i", $id);
     $stmt_check->execute();
-    $result_check = $stmt_check->get_result();
+    $stmt_check->store_result(); // Almacenar el resultado
     
-    if ($result_check->num_rows === 0) {
+    if ($stmt_check->num_rows === 0) {
         throw new Exception("El servicio no existe");
     }
     $stmt_check->close();
@@ -64,6 +64,9 @@ try {
             WHERE id = ?";
     
     $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        throw new Exception("Error al preparar la consulta: " . $conn->error);
+    }
     $modalidad_value = $modalidad_id > 0 ? $modalidad_id : null;
     $stmt->bind_param("ssdiii", $nombre, $descripcion, $precio, $modalidad_value, $duracion_minutos, $id);
     

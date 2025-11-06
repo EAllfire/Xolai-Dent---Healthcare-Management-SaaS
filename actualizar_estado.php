@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 
 // Limpiar cualquier output previo
+ob_start();
 ob_clean();
 
 try {
@@ -10,27 +11,6 @@ try {
     echo json_encode(["success" => false, "error" => "Error conexión DB"]);
     exit;
 }
-
-$cita_id = $_POST['cita_id'] ?? '';
-$estado_id = $_POST['estado_id'] ?? '';
-
-if ($cita_id && $estado_id && is_numeric($cita_id) && is_numeric($estado_id)) {
-    $cita_id = intval($cita_id);
-    $estado_id = intval($estado_id);
-    
-    $sql = "UPDATE agenda_citas SET estado_id = $estado_id WHERE id = $cita_id";
-    
-    if ($conn->query($sql)) {
-        echo json_encode(["success" => true, "message" => "Estado actualizado"]);
-    } else {
-        echo json_encode(["success" => false, "error" => "Error SQL"]);
-    }
-} else {
-    echo json_encode(["success" => false, "error" => "Datos inválidos"]);
-}
-
-exit;
-?>
 
 $cita_id = $_POST['cita_id'] ?? '';
 $nuevo_estado = $_POST['estado'] ?? '';

@@ -30,8 +30,6 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             margin: 0;
             padding-top: 100px;
         }
-        
-        /* Header Styles - Same as index.php */
         .main-header {
             background: #1275a0;
             color: white;
@@ -50,18 +48,11 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             z-index: 1050;
             box-shadow: 0 2px 15px rgba(0,0,0,0.1);
         }
-        
-        .header-left {
+        .header-left, .header-right {
             display: flex;
             align-items: center;
             gap: 15px;
         }
-        
-        .header-right {
-            display: flex;
-            align-items: center;
-        }
-        
         .logo-section {
             position: absolute;
             left: 50%;
@@ -71,71 +62,38 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             flex-direction: column;
             text-align: center;
         }
-        
         .header-logo img {
             max-height: 60px;
-            margin-left: 10px;
-            width: auto;
-            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.1)) brightness(1.1);
         }
-        
         .logo-text {
             margin: 0;
             font-size: 24px;
             font-weight: bold;
-            color: white;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            letter-spacing: 0.5px;
-            text-align: center;
         }
-        
         .user-info {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: white;
             font-size: 14px;
-            background: rgba(255,255,255,0.1);
-            padding: 8px 12px;
-            border-radius: 6px;
         }
-        
-        .user-type {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-        
         .btn-header {
             color: white;
             text-decoration: none;
             font-weight: bold;
-            transition: color 0.3s ease;
-            background: none;
-            border: none;
             padding: 0.5rem 1rem;
             font-size: 13px;
-            cursor: pointer;
         }
-        
-        .btn-header:hover {
-            text-decoration: underline;
-            color: #cce7ff;
-        }
-        
         .container-custom {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 0 15px;
         }
-        
         .page-title {
-            color: #1f2937;
             font-size: 2rem;
             font-weight: 600;
             margin-bottom: 2rem;
             text-align: center;
         }
-        
         .actions-bar {
             background: #ffffff;
             padding: 1.5rem;
@@ -146,195 +104,11 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             justify-content: space-between;
             align-items: center;
         }
-        
-        .btn-primary-custom {
-            background-color: #007bff;
-            border-color: #007bff;
-            color: #ffffff;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary-custom:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-        }
-        
-        .services-grid {
+        .table-container {
             background: #ffffff;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 1.5rem;
-        }
-        
-        .table-custom {
-            margin-bottom: 0;
-        }
-        
-        .table-custom th {
-            background-color: #f8f9fa;
-            color: #1f2937;
-            font-weight: 600;
-            border-bottom: 2px solid #dee2e6;
-        }
-        
-        .table-custom td {
-            vertical-align: middle;
-            color: #333;
-        }
-        
-        .btn-action {
-            padding: 0.25rem 0.5rem;
-            margin: 0 0.125rem;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-edit {
-            background-color: #28a745;
-            color: #ffffff;
-        }
-        
-        .btn-edit:hover {
-            background-color: #1e7e34;
-        }
-        
-        .btn-delete {
-            background-color: #dc3545;
-            color: #ffffff;
-        }
-        
-        .btn-delete:hover {
-            background-color: #bd2130;
-        }
-        
-        .modal-content {
-            border-radius: 8px;
-            border: none;
-        }
-        
-        .modal-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-            border-radius: 8px 8px 0 0;
-        }
-        
-        .form-control {
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            color: #333;
-            font-size: 0.95rem;
-        }
-        
-        .form-control:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-        }
-        
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: #6c757d;
-            cursor: pointer;
-        }
-        
-        .close-btn:hover {
-            color: #000000;
-        }
-        
-        .user-info {
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: #6c757d;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #6c757d;
-        }
-        
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        
-        /* Modern Select Styles */
-        select, .form-control select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background: white;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            background-size: 16px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px 40px 10px 12px;
-            font-size: 14px;
-            color: #374151;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-        
-        select:hover {
-            border-color: #1275a0;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        select:focus {
-            outline: none;
-            border-color: #1275a0;
-            box-shadow: 0 0 0 3px rgba(18, 117, 160, 0.1);
-        }
-        
-        select:disabled {
-            background-color: #f9fafb;
-            color: #9ca3af;
-            cursor: not-allowed;
-        }
-        
-        /* Form Control Override */
-        .form-control {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background: white;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            background-size: 16px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px 40px 10px 12px;
-            font-size: 14px;
-            color: #374151;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-        
-        .form-control:hover {
-            border-color: #1275a0;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .form-control:focus {
-            outline: none;
-            border-color: #1275a0;
-            box-shadow: 0 0 0 3px rgba(18, 117, 160, 0.1);
         }
     </style>
 </head>
@@ -345,33 +119,19 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             <div class="header-logo">
                 <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles">
             </div>
-            
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
                 <span><?php echo htmlspecialchars($user_nombre); ?></span>
                 <span class="user-type">(<?php echo ucfirst($user_tipo); ?>)</span>
             </div>
         </div>
-        
         <div class="logo-section">
             <div class="logo-text">IMAGENOLOGÍA</div>
         </div>
-        
         <div class="header-right">
-            <div class="header-buttons">
-                <a href="index.php" class="btn-header">
-                    <i class="fas fa-calendar"></i> Calendario
-                </a>
-                <a href="admin_usuarios.php" class="btn-header">
-                    <i class="fas fa-users-cog"></i> Admin
-                </a>
-                <a href="cliente.php" class="btn-header">
-                    <i class="fas fa-user-friends"></i> Vista Cliente
-                </a>
-                <a href="logout.php" class="btn-header">
-                    <i class="fas fa-sign-out-alt"></i> Salir
-                </a>
-            </div>
+            <a href="index.php" class="btn-header"><i class="fas fa-calendar"></i> Calendario</a>
+            <a href="panel_admin.php" class="btn-header"><i class="fas fa-cog"></i> Panel de Administración</a>
+            <a href="logout.php" class="btn-header"><i class="fas fa-sign-out-alt"></i> Salir</a>
         </div>
     </header>
 
@@ -379,25 +139,28 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
     <div class="container-custom">
         <h1 class="page-title">Catálogo de Servicios</h1>
         
-        <!-- Actions Bar -->
         <div class="actions-bar">
             <div>
-                <button class="btn-primary-custom" onclick="abrirModalNuevoServicio()">
+                <a href="panel_admin.php" class="btn btn-secondary mr-2"><i class="fas fa-arrow-left"></i> Volver al Panel</a>
+                <button class="btn btn-primary" onclick="abrirModalNuevoServicio()">
                     <i class="fas fa-plus"></i> Nuevo Servicio
                 </button>
+            </div>
+            <div class="input-group" style="max-width: 400px;">
+                <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                </div>
+                <input type="text" id="searchInput" class="form-control" placeholder="Buscar por nombre o descripción...">
             </div>
             <div>
                 <span id="total-servicios" class="text-muted">Cargando...</span>
             </div>
         </div>
         
-        <!-- Services Grid -->
-        <div class="services-grid">
-            <div id="loading" class="loading">
-                <i class="fas fa-spinner fa-spin"></i> Cargando servicios...
-            </div>
+        <div class="table-container">
+            <div id="loading" class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Cargando servicios...</div>
             <div id="services-table" style="display: none;">
-                <table class="table table-custom table-hover">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -409,15 +172,13 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="services-tbody">
-                        <!-- Los servicios se cargarán aquí -->
-                    </tbody>
+                    <tbody id="services-tbody"></tbody>
                 </table>
             </div>
-            <div id="empty-state" class="empty-state" style="display: none;">
-                <i class="fas fa-clipboard-list"></i>
+            <div id="empty-state" class="text-center p-5" style="display: none;">
+                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
                 <h4>No hay servicios registrados</h4>
-                <p>Comience agregando su primer servicio al catálogo</p>
+                <p>Comience agregando su primer servicio al catálogo.</p>
             </div>
         </div>
     </div>
@@ -428,43 +189,28 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalServicioTitle">Nuevo Servicio</h5>
-                    <button type="button" class="close-btn" data-dismiss="modal">
-                        <span>&times;</span>
-                    </button>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <form id="formServicio">
                         <input type="hidden" id="servicio_id" name="id">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label for="nombre">Nombre del Servicio *</label>
-                                    <input type="text" class="form-control" id="nombre" name="nombre" required>
-                                </div>
-                            </div>
+                        <div class="form-group">
+                            <label for="nombre">Nombre del Servicio *</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" required>
                         </div>
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="precio">Precio *</label>
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text">$</span>
-                                        </div>
-                                        <input type="number" class="form-control" id="precio" name="precio" step="0.01" min="0" required>
-                                    </div>
+                            <div class="col-md-6 form-group">
+                                <label for="precio">Precio *</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text">$</span></div>
+                                    <input type="number" class="form-control" id="precio" name="precio" step="0.01" min="0" required>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="duracion_minutos">Duración (minutos)</label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control" id="duracion_minutos" name="duracion_minutos" min="5" max="180" value="30">
-                                        <div class="input-group-append">
-                                            <span class="input-group-text">min</span>
-                                        </div>
-                                    </div>
-                                    <small class="form-text text-muted">Tiempo estimado del procedimiento (5-180 minutos)</small>
+                            <div class="col-md-6 form-group">
+                                <label for="duracion_minutos">Duración (minutos)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="duracion_minutos" name="duracion_minutos" min="5" max="180" value="30">
+                                    <div class="input-group-append"><span class="input-group-text">min</span></div>
                                 </div>
                             </div>
                         </div>
@@ -476,7 +222,6 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                             <label>Modalidad Asociada</label>
                             <select class="form-control" id="modalidad_id" name="modalidad_id">
                                 <option value="">Seleccionar modalidad...</option>
-                                <!-- Las modalidades se cargarán aquí -->
                             </select>
                         </div>
                     </form>
@@ -491,159 +236,115 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let servicios = [];
         let modalidades = [];
-        
-        // Inicializar cuando el documento esté listo
+
         $(document).ready(function() {
             cargarModalidades();
             cargarServicios();
+
+            $('#searchInput').on('keyup', function() {
+                const searchTerm = $(this).val().toLowerCase();
+                const serviciosFiltrados = servicios.filter(servicio => {
+                    return (servicio.nombre && servicio.nombre.toLowerCase().includes(searchTerm)) ||
+                           (servicio.descripcion && servicio.descripcion.toLowerCase().includes(searchTerm));
+                });
+                renderizarServicios(serviciosFiltrados);
+                actualizarContador(serviciosFiltrados.length, servicios.length);
+            });
         });
-        
-        // Cargar modalidades disponibles
+
         function cargarModalidades() {
             fetch('citas/modalidades_json.php')
                 .then(response => response.json())
                 .then(data => {
                     modalidades = data;
-                    renderizarModalidades();
+                    const select = document.getElementById('modalidad_id');
+                    data.forEach(modalidad => {
+                        const option = document.createElement('option');
+                        option.value = modalidad.id;
+                        option.textContent = modalidad.nombre;
+                        select.appendChild(option);
+                    });
                 })
-                .catch(error => {
-                    console.error('Error al cargar modalidades:', error);
-                });
+                .catch(error => console.error('Error al cargar modalidades:', error));
         }
-        
-        // Renderizar dropdown de modalidades
-        function renderizarModalidades() {
-            const select = document.getElementById('modalidad_id');
-            
-            modalidades.forEach(modalidad => {
-                const option = document.createElement('option');
-                option.value = modalidad.id;
-                option.textContent = modalidad.nombre;
-                select.appendChild(option);
-            });
-        }
-        
-        // Cargar servicios
+
         function cargarServicios() {
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('services-table').style.display = 'none';
-            document.getElementById('empty-state').style.display = 'none';
+            $('#loading').show();
+            $('#services-table').hide();
+            $('#empty-state').hide();
             
             fetch('citas/servicios_json.php')
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    console.log('Datos recibidos:', data);
-                    
-                    // Verificar si la respuesta es un error
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    
-                    // Verificar si es un array
-                    if (!Array.isArray(data)) {
-                        throw new Error('Los datos recibidos no son un array válido');
-                    }
-                    
+                    if (data.error) throw new Error(data.error);
                     servicios = data;
                     renderizarServicios();
                     actualizarContador();
                 })
                 .catch(error => {
                     console.error('Error al cargar servicios:', error);
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('empty-state').style.display = 'block';
-                    
-                    // Mostrar error más específico
-                    const emptyState = document.getElementById('empty-state');
-                    emptyState.innerHTML = `
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h4>Error al cargar servicios</h4>
-                        <p>Error: ${error.message}</p>
-                        <button class="btn btn-primary" onclick="cargarServicios()">
-                            <i class="fas fa-refresh"></i> Intentar de nuevo
-                        </button>
-                    `;
+                    $('#loading').hide();
+                    $('#empty-state').html(`<h4>Error al cargar servicios</h4><p>${error.message}</p>`).show();
                 });
         }
-        
-        // Renderizar tabla de servicios
-        function renderizarServicios() {
+
+        function renderizarServicios(listaServicios) {
+            const lista = listaServicios || servicios;
             const tbody = document.getElementById('services-tbody');
             tbody.innerHTML = '';
-            
-            document.getElementById('loading').style.display = 'none';
-            
-            // Verificar que servicios sea un array válido
-            if (!Array.isArray(servicios) || servicios.length === 0) {
-                document.getElementById('empty-state').style.display = 'block';
+            $('#loading').hide();
+
+            if (!Array.isArray(lista) || lista.length === 0) {
+                $('#services-table').hide();
+                $('#empty-state').show();
                 return;
             }
+
+            $('#empty-state').hide();
+            $('#services-table').show();
             
-            document.getElementById('services-table').style.display = 'block';
-            
-            servicios.forEach(servicio => {
+            lista.forEach(servicio => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${servicio.id}</td>
                     <td><strong>${servicio.nombre}</strong></td>
-                    <td>${servicio.descripcion || 'Sin descripción'}</td>
+                    <td>${servicio.descripcion || '-'}</td>
+                    <td>$${servicio.precio ? parseFloat(servicio.precio).toLocaleString('es-MX') : '0.00'}</td>
+                    <td><span class="badge badge-info">${servicio.duracion_minutos || 30} min</span></td>
+                    <td><small class="text-muted">${servicio.modalidad_nombre || '-'}</small></td>
                     <td>
-                        <strong class="text-success">$${servicio.precio ? parseFloat(servicio.precio).toLocaleString('es-MX', {minimumFractionDigits: 2}) : '0.00'}</strong>
-                    </td>
-                    <td>
-                        <span class="badge badge-info">
-                            ${servicio.duracion_minutos || 30} min
-                        </span>
-                    </td>
-                    <td>
-                        <small class="text-muted">
-                            ${servicio.modalidad_nombre || 'Sin modalidad'}
-                        </small>
-                    </td>
-                    <td>
-                        <button class="btn-action btn-edit" onclick="editarServicio(${servicio.id})" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-action btn-delete" onclick="eliminarServicio(${servicio.id})" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <button class="btn btn-sm btn-success" onclick="editarServicio(${servicio.id})" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="eliminarServicio(${servicio.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
-        
-        // Actualizar contador
-        function actualizarContador() {
-            const total = Array.isArray(servicios) ? servicios.length : 0;
-            document.getElementById('total-servicios').textContent = `${total} servicios registrados`;
+
+        function actualizarContador(totalFiltrado, totalOriginal) {
+            const totalServicios = totalOriginal !== undefined ? totalOriginal : (Array.isArray(servicios) ? servicios.length : 0);
+            
+            if (totalFiltrado !== undefined && totalFiltrado !== totalServicios) {
+                 document.getElementById('total-servicios').textContent = `Mostrando ${totalFiltrado} de ${totalServicios} servicios`;
+            } else {
+                 document.getElementById('total-servicios').textContent = `${totalServicios} servicios registrados`;
+            }
         }
-        
-        // Abrir modal para nuevo servicio
+
         function abrirModalNuevoServicio() {
             document.getElementById('modalServicioTitle').textContent = 'Nuevo Servicio';
             document.getElementById('formServicio').reset();
             document.getElementById('servicio_id').value = '';
-            document.getElementById('modalidad_id').value = '';
-            
             $('#modalServicio').modal('show');
         }
-        
-        // Editar servicio
+
         function editarServicio(id) {
-            const servicio = servicios.find(s => s.id === id);
+            const servicio = servicios.find(s => s.id == id);
             if (!servicio) return;
             
             document.getElementById('modalServicioTitle').textContent = 'Editar Servicio';
@@ -656,10 +357,14 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             
             $('#modalServicio').modal('show');
         }
-        
-        // Guardar servicio
+
         function guardarServicio() {
-            const formData = new FormData(document.getElementById('formServicio'));
+            const form = document.getElementById('formServicio');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            const formData = new FormData(form);
             
             const isEdit = document.getElementById('servicio_id').value !== '';
             const url = isEdit ? 'citas/actualizar_servicio.php' : 'citas/crear_servicio.php';
@@ -680,35 +385,32 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al guardar el servicio');
+                alert('Error al guardar el servicio.');
             });
         }
-        
-        // Eliminar servicio
+
         function eliminarServicio(id) {
-            const servicio = servicios.find(s => s.id === id);
+            const servicio = servicios.find(s => s.id == id);
             if (!servicio) return;
             
             if (confirm(`¿Está seguro que desea eliminar el servicio "${servicio.nombre}"?`)) {
                 fetch('citas/eliminar_servicio.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: id })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         cargarServicios();
-                        alert('Servicio eliminado correctamente');
+                        alert('Servicio eliminado correctamente.');
                     } else {
                         alert('Error: ' + data.error);
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error al eliminar el servicio');
+                    alert('Error al eliminar el servicio.');
                 });
             }
         }

@@ -1,0 +1,51 @@
+/* Ajuste general del contenedor */
+.mini-calendar {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto;
+  font-size: clamp(10px, 1.5vw, 12px); /* escala con pantalla */
+}
+
+/* Asegurar que el calendario ocupe todo el ancho del contenedor */
+.mini-calendar .flatpickr-calendar {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+  margin: 0 auto !important;
+}
+
+/* Ajustar ancho de días dinámicamente */
+.mini-calendar .flatpickr-calendar .flatpickr-days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important; /* 7 días por fila */
+  gap: 2px !important;
+  width: 100% !important;
+}
+
+/* Responsivo: los días se adaptan al ancho disponible */
+.mini-calendar .flatpickr-calendar .flatpickr-day {
+  aspect-ratio: 1 / 1; /* mantiene forma cuadrada */
+  width: 100% !important;
+  height: auto !important;
+  line-height: normal !important;
+  font-size: clamp(10px, 1.2vw, 12px);
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+/* Ajuste fino para pantallas pequeñas */
+@media (max-width: 768px) {
+  .calendar-side {
+    width: 100% !important;
+    flex: 1 1 100%;
+  }
+  .mini-calendar {
+    font-size: 11px;
+  }
+}

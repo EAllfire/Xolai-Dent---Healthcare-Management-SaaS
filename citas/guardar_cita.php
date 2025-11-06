@@ -12,6 +12,15 @@ $paciente_id = $_POST['paciente_id'] ?? null;
 $profesional_id = $_POST['profesional_id'] ?? null;
 $servicio_id = $_POST['servicio_id'] ?? null;
 $modalidad_id = $_POST['modalidad_id'] ?? null;
+
+// Modalities that don't require a specific professional
+$modalidades_sin_profesional = [3, 4, 5, 6, 7, 8]; 
+if (in_array($modalidad_id, $modalidades_sin_profesional)) {
+    $profesional_id = null;
+} else {
+    $profesional_id = is_numeric($profesional_id) ? intval($profesional_id) : null;
+}
+
 $estado_id = $_POST['estado_id'] ?? null; // <-- CAMBIO IMPORTANTE!
 $tipo = $_POST['tipo'] ?? '';
 $nota_interna = $_POST['nota_interna'] ?? '';

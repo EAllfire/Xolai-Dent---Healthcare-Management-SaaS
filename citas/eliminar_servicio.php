@@ -27,25 +27,28 @@ try {
         throw new Exception("ID de servicio no válido");
     }
     
-    // Verificar que el servicio existe
+    // Verificar que el servicio existe (compatible con sistemas sin mysqlnd)
     $stmt_check = $conn->prepare("SELECT nombre FROM portal_servicios WHERE id = ?");
     $stmt_check->bind_param("i", $id);
     $stmt_check->execute();
-    $result_check = $stmt_check->get_result();
+    $stmt_check->store_result();
     
-    if ($result_check->num_rows === 0) {
+    if ($stmt_check->num_rows === 0) {
         throw new Exception("El servicio no existe");
     }
     
-    $servicio = $result_check->fetch_assoc();
+    $stmt_check->bind_result($nombre_servicio);
+    $stmt_check->fetch();
+    $servicio = ['nombre' => $nombre_servicio];
     $stmt_check->close();
-    
-    // Verificar si hay citas asociadas al servicio
+
+    // Verificar si hay citas asociadas al servicio (compatible con sistemas sin mysqlnd)
     $stmt_citas = $conn->prepare("SELECT COUNT(*) as total FROM agenda_citas WHERE servicio_id = ?");
     $stmt_citas->bind_param("i", $id);
     $stmt_citas->execute();
-    $result_citas = $stmt_citas->get_result();
-    $citas = $result_citas->fetch_assoc();
+    $stmt_citas->bind_result($total_citas);
+    $stmt_citas->fetch();
+    $citas = ['total' => $total_citas];
     $stmt_citas->close();
     
     if ($citas['total'] > 0) {

@@ -1,10 +1,121 @@
 <?php
 session_start();
 require_once 'includes/db.php';
-// header variables for this view
-$show_calendar = true;
-$show_back = false;
-// header include will be added into the body after head
+
+// Simple API endpoints inside the same file for AJAX
+$action = $_GET['action'] ?? '';
+
+if (!empty($action)) {
+    header('Content-Type: application/json');
+
+    try {
+        if ($action === 'stats') {
+            $period = $_GET['period'] ?? 'week';
+            $interval = ($period === 'month') ? 29 : 6;
+            
+            $sql = "SELECT COUNT(*) as total FROM agenda_citas WHERE fecha BETWEEN DATE_SUB(CURDATE(), INTERVAL ? DAY) AND CURDATE()";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $interval);
+            $stmt->execute();
+            $stmt->bind_result($total);
+            $stmt->fetch();
+            $stmt->close();
+
+            $factor = 40.06;
+            $factor_diff = -12.59;
+
+            $sql2 = "SELECT COUNT(DISTINCT paciente_id) as nuevos FROM agenda_citas WHERE fecha BETWEEN DATE_SUB(CURDATE(), INTERVAL ? DAY) AND CURDATE()";
+            $stmt2 = $conn->prepare($sql2);
+            $stmt2->bind_param("i", $interval);
+            $stmt2->execute();
+            $stmt2->bind_result($nuevos);
+            $stmt2->fetch();
+            $stmt2->close();
+            $nuevos_diff = -8.53;
+
+            $pagos_online = 0;
+
+            echo json_encode(['success'=>true,'total'=>$total,'factor'=>$factor,'factor_diff'=>$factor_diff,'nuevos'=>$nuevos,'nuevos_diff'=>$nuevos_diff,'pagos_online'=>$pagos_online]);
+            exit;
+        }
+
+        if ($action === 'states_by_count') {
+            $sql = "SELECT ec.nombre, COUNT(*) as cantidad FROM agenda_citas c LEFT JOIN agenda_estado_cita ec ON c.estado_id = ec.id WHERE c.fecha = CURDATE() GROUP BY ec.nombre";
+            $res = $conn->query($sql);
+            if ($res === false) throw new Exception("Query failed: " . $conn->error);
+            $out = [];
+            while ($r = $res->fetch_assoc()) {
+                $out[] = $r;
+            }
+            echo json_encode(['success'=>true,'data'=>$out]);
+            exit;
+        }
+
+        if ($action === 'reservas_today') {
+            $modalidad = $_GET['modalidad'] ?? 'all';
+            $sql = "SELECT c.hora_inicio, c.hora_fin, p.nombre, p.telefono, p.alergias as diagnostico, p.tipo, p.origen, c.nota_paciente, s.nombre as servicio, ec.nombre as estado
+                    FROM agenda_citas c
+                    LEFT JOIN portal_pacientes p ON c.paciente_id = p.id
+                    LEFT JOIN portal_servicios s ON c.servicio_id = s.id
+                    LEFT JOIN agenda_estado_cita ec ON c.estado_id = ec.id
+                    WHERE c.fecha = CURDATE()";
+            
+            $params = [];
+            $types = '';
+
+            if ($modalidad !== 'all' && is_numeric($modalidad)) {
+                $sql .= " AND c.modalidad_id = ?";
+                $params[] = $modalidad;
+                $types .= 'i';
+            }
+            $sql .= " ORDER BY c.hora_inicio";
+
+            $stmt = $conn->prepare($sql);
+            if ($stmt === false) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+
+            if (!empty($types)) {
+                $stmt->bind_param($types, ...$params);
+            }
+            
+            $stmt->execute();
+            $stmt->store_result();
+            
+            $data = [];
+            $row = [];
+            $meta = $stmt->result_metadata();
+            $bind_params = [];
+            while ($field = $meta->fetch_field()) {
+                $bind_params[] = &$row[$field->name];
+            }
+            call_user_func_array([$stmt, 'bind_result'], $bind_params);
+
+            while ($stmt->fetch()) {
+                $c = [];
+                foreach ($row as $key => $val) {
+                    $c[$key] = $val;
+                }
+                $data[] = $c;
+            }
+            $stmt->close();
+            
+            echo json_encode(['success' => true, 'data' => $data]);
+            exit;
+        }
+
+        throw new Exception("Acción no válida: " . htmlspecialchars($action));
+
+    } catch (Throwable $t) {
+        http_response_code(500);
+        error_log("Error en API de reporte.php: " . $t->getMessage());
+        echo json_encode(['success' => false, 'error' => 'Error interno del servidor.', 'details' => $t->getMessage()]);
+        exit;
+    }
+}
+
+// HTML Rendering part
+header('Content-Type: text/html; charset=utf-8');
 
 // Verificar si el usuario está logueado
 if (!isset($_SESSION['usuario_id'])) {
@@ -21,72 +132,6 @@ $user_tipo = $_SESSION['usuario_tipo'] ?? 'usuario';
 $puede_crear_citas = in_array($user_tipo, ['admin', 'caja']);
 $puede_gestionar_usuarios = ($user_tipo === 'admin');
 
-// Simple API endpoints inside the same file for AJAX
-$action = $_GET['action'] ?? '';
-header('Content-Type: application/json');
-if ($action === 'stats') {
-    // total reservas today/week (example: week)
-    $period = $_GET['period'] ?? 'week';
-    if ($period === 'week') {
-        // week: count reservations in the last 7 days
-        $sql = "SELECT COUNT(*) as total FROM agenda_citas WHERE fecha BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()";
-        $res = $conn->query($sql);
-        $total = 0;
-        if ($res) { $row = $res->fetch_assoc(); $total = intval($row['total']); }
-
-        // factor ocupacion: placeholder calc (appointments / possible slots) - return dummy
-        $factor = 40.06;
-        $factor_diff = -12.59; // percent change
-
-        // nuevos clientes (count of distinct patients created in period)
-        $sql2 = "SELECT COUNT(DISTINCT paciente_id) as nuevos FROM agenda_citas WHERE fecha BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()";
-        $r2 = $conn->query($sql2);
-        $nuevos = $r2 ? intval($r2->fetch_assoc()['nuevos']) : 0;
-        $nuevos_diff = -8.53;
-
-        // pagos en linea: placeholder 0
-        $pagos_online = 0;
-
-        echo json_encode(['success'=>true,'total'=>$total,'factor'=>$factor,'factor_diff'=>$factor_diff,'nuevos'=>$nuevos,'nuevos_diff'=>$nuevos_diff,'pagos_online'=>$pagos_online]);
-        exit;
-    }
-}
-
-if ($action === 'states_by_count') {
-    // return counts grouped by estado
-    $sql = "SELECT ec.nombre, COUNT(*) as cantidad FROM agenda_citas c LEFT JOIN agenda_estado_cita ec ON c.estado_id = ec.id WHERE c.fecha = CURDATE() GROUP BY ec.nombre";
-    $res = $conn->query($sql);
-    $out = [];
-    while ($r = $res->fetch_assoc()) {
-        $out[] = $r;
-    }
-    echo json_encode(['success'=>true,'data'=>$out]);
-    exit;
-}
-
-if ($action === 'reservas_today') {
-    $modalidad = $_GET['modalidad'] ?? 'all';
-    $sql = "SELECT c.hora_inicio, c.hora_fin, p.nombre, p.telefono, p.diagnostico, p.tipo, p.origen, c.nota_paciente, s.nombre as servicio, ec.nombre as estado
-            FROM agenda_citas c
-            LEFT JOIN portal_pacientes p ON c.paciente_id = p.id
-            LEFT JOIN portal_servicios s ON c.servicio_id = s.id
-            LEFT JOIN agenda_estado_cita ec ON c.estado_id = ec.id
-            WHERE c.fecha = CURDATE()";
-    if ($modalidad !== 'all') {
-        $sql .= " AND c.modalidad_id = " . intval($modalidad);
-    }
-    $sql .= " ORDER BY c.hora_inicio";
-    $res = $conn->query($sql);
-    $out = [];
-    while ($r = $res->fetch_assoc()) {
-        $out[] = $r;
-    }
-    echo json_encode(['success'=>true,'data'=>$out]);
-    exit;
-}
-
-// If not API, render HTML page
-header('Content-Type: text/html; charset=utf-8');
 ?>
 <!doctype html>
 <html lang="es">
@@ -96,17 +141,15 @@ header('Content-Type: text/html; charset=utf-8');
     <title>Reportes</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-        <link rel="stylesheet" href="css/header.css">
-    </head>
-    <body>
-        <?php $show_calendar = true; $show_back = false; $show_admin_tools = $puede_gestionar_usuarios; $show_mobile_menu = false; include __DIR__ . '/includes/header.php'; ?>
+    <link rel="stylesheet" href="css/header.css">
+</head>
+<body>
+    <?php $show_calendar = true; $show_back = false; $show_admin_tools = $puede_gestionar_usuarios; $show_mobile_menu = false; include __DIR__ . '/includes/header.php'; ?>
 
-        <div style="height:12px"></div>
+    <div style="height:12px"></div>
 
     <style>
-        /* Report stats as boxed cards (recuadros) */
         .panel-grid { display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; }
-        /* make .card-stat a reusable boxed card anywhere on the page */
         .card-stat { background:#fff; padding:16px 18px; border-radius:10px; box-shadow:0 6px 18px rgba(15,23,42,0.06); margin-bottom:12px }
         .panel-grid .card-stat { flex:1 1 0; min-width:220px }
         .small-muted { color:#6b7280; font-size:12px; margin-bottom:8px }
@@ -258,13 +301,19 @@ header('Content-Type: text/html; charset=utf-8');
                     if (j.success) {
                         var out = document.getElementById('detalleHoy');
                         out.innerHTML = '';
+                        if (j.data.length === 0) {
+                            out.innerHTML = '<div class="text-muted p-3">No hay reservas para hoy con los filtros seleccionados.</div>';
+                            return;
+                        }
                         j.data.forEach(function(row){
                             var div = document.createElement('div');
-                            div.style.padding='8px'; div.style.borderBottom='1px solid #eee';
+                            div.style.padding='8px'; 
+                            div.style.borderBottom='1px solid #eee';
+
                             div.innerHTML = '<strong>'+row.hora_inicio+' - '+row.hora_fin+'</strong> <br>' +
-                                            '<strong>'+row.nombre+'</strong> ('+row.telefono+')<br>' +
-                                            row.diagnostico + ' - ' + row.tipo + ' - ' + row.origen + '<br>' +
-                                            '<em>'+row.servicio+'</em> <span style="float:right">'+row.estado+'</span>';
+                                            '<strong>'+row.nombre+'</strong> ('+(row.telefono || 'N/A')+')<br>' +
+                                            (row.diagnostico || 'N/A') + ' - ' + (row.tipo || 'N/A') + ' - ' + (row.origen || 'N/A') + '<br>' +
+                                            '<em>'+(row.servicio || 'N/A')+'</em> <span style="float:right">'+(row.estado || 'N/A')+'</span>';
                             out.appendChild(div);
                         });
                     }

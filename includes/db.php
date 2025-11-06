@@ -3,18 +3,18 @@
 // Actualizado: 7 de octubre de 2025 - Conexión remota
 
 // CONFIGURACIÓN REMOTA (PRODUCCIÓN)
-/*$servername = "localhost";  // localhost para mejor rendimiento en el mismo servidor
+$servername = "localhost";  // localhost para mejor rendimiento en el mismo servidor
 $username = "eli";
 $password = "HACeli2025";
 $dbname = "hac";
-*/
-$servername = "localhost";  // localhost para mejor rendimiento en el mismo servidor
+
+/*$servername = "localhost";  // localhost para mejor rendimiento en el mismo servidor
 $username = "root";
 $password = "root";
 $dbname = "agenda_hospital";
-$port = "8883";
+$port = "8883";*/
 // Crear conexión con configuración mejorada
-$conn = new mysqli($servername, $username, $password, $dbname, $port );
+$conn = new mysqli($servername, $username, $password, $dbname );
 
 // Configurar charset para caracteres especiales
 $conn->set_charset("utf8");

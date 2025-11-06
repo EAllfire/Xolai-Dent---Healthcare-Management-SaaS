@@ -53,16 +53,7 @@ if (!puedeRealizar('gestionar_usuarios')) {
     $show_calendar = true; $show_back = false; $show_admin_tools = $puede_gestionar_usuarios; $show_mobile_menu = false;
     include __DIR__ . '/includes/header.php';
     ?>
-    <div class="mb-3 d-flex justify-content-between">
-        <div>
-            <button id="btnNuevo" class="btn btn-primary">Agregar Modalidad</button>
-        </div>
-        <div>
-            <small class="text-muted">Crear / editar / eliminar modalidades y subir imágenes para mostrarlas en el calendario.</small>
-        </div>
-    </div>
-
-    <div style="padding-top:12px"></div>
+<div class="container-fluid" style="padding-top: 100px;">
     <div class="table-responsive">
         <table class="table table-striped" id="tableModalidades">
             <thead>
@@ -75,6 +66,43 @@ if (!puedeRealizar('gestionar_usuarios')) {
             </thead>
             <tbody></tbody>
         </table>
+    </div>
+    
+    <div class="mt-3 d-flex justify-content-between">
+        <div>
+            <a href="panel_admin.php" class="btn btn-secondary">Volver al Panel</a>
+            <button id="btnNuevo" class="btn btn-primary">Agregar Modalidad</button>
+        </div>
+        <div>
+            <small class="text-muted">Crear / editar / eliminar modalidades y subir imágenes para mostrarlas en el calendario.</small>
+        </div>
+    </div>
+
+    <!-- Add Modal -->
+    <div class="modal" tabindex="-1" role="dialog" id="addModal">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Agregar Modalidad</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeModal('addModal')">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="formAdd">
+                <div class="form-group">
+                    <label for="add_nombre">Nombre</label>
+                    <input class="form-control" id="add_nombre" name="nombre" required>
+                </div>
+                <div id="addAlert"></div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('addModal')">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="saveAdd">Guardar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Edit Modal -->
@@ -134,6 +162,8 @@ if (!puedeRealizar('gestionar_usuarios')) {
         </div>
       </div>
     </div>
+</div>
+
 
     <script>
     var candidates = [
@@ -177,15 +207,45 @@ if (!puedeRealizar('gestionar_usuarios')) {
                 if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="4"><em>No hay modalidades registradas.</em></td></tr>'; return; }
                 data.forEach(function(m){
                     var tr = document.createElement('tr');
-                    var imgHtml = m.imagen? '<img src="'+m.imagen+'" class="thumb">' : '<div class="text-muted">Sin imagen</div>';
-                    tr.innerHTML = '<td>'+m.id+'</td>'+
-                                   '<td>'+ (m.nombre? escapeHtml(m.nombre) : '<em>Sin nombre</em>') +'</td>'+
-                                   '<td>'+ imgHtml +'</td>'+
-                                   '<td>'+
-                                     '<button class="btn btn-sm btn-outline-secondary mr-1" onclick="openEdit('+m.id+', '+quote(m.nombre)+')">Editar</button>'+
-                                     '<button class="btn btn-sm btn-outline-primary mr-1" onclick="openUpload('+m.id+')">Subir imagen</button>'+
-                                     '<button class="btn btn-sm btn-outline-danger" onclick="confirmDelete('+m.id+', '+quote(m.nombre)+')">Eliminar</button>'+
-                                   '</td>';
+
+                    var tdId = document.createElement('td');
+                    tdId.textContent = m.id;
+                    tr.appendChild(tdId);
+
+                    var tdName = document.createElement('td');
+                    tdName.innerHTML = m.nombre ? escapeHtml(m.nombre) : '<em>Sin nombre</em>';
+                    tr.appendChild(tdName);
+
+                    var tdImage = document.createElement('td');
+                    if (m.imagen && (m.imagen.endsWith('.php') || m.imagen.endsWith('.sql'))) {
+                        console.error('URL de imagen inválida para modalidad ID ' + m.id + ': ' + m.imagen);
+                        tdImage.innerHTML = '<div class="text-danger font-weight-bold">URL Inválida</div>';
+                    } else {
+                        tdImage.innerHTML = m.imagen ? '<img src="'+escapeHtml(m.imagen)+'" class="thumb">' : '<div class="text-muted">Sin imagen</div>';
+                    }
+                    tr.appendChild(tdImage);
+
+                    var tdActions = document.createElement('td');
+
+                    var btnEdit = document.createElement('button');
+                    btnEdit.className = 'btn btn-sm btn-outline-secondary mr-1';
+                    btnEdit.textContent = 'Editar';
+                    btnEdit.onclick = function() { openEdit(m.id, m.nombre); };
+                    tdActions.appendChild(btnEdit);
+
+                    var btnUpload = document.createElement('button');
+                    btnUpload.className = 'btn btn-sm btn-outline-primary mr-1';
+                    btnUpload.textContent = 'Subir imagen';
+                    btnUpload.onclick = function() { openUpload(m.id); };
+                    tdActions.appendChild(btnUpload);
+
+                    var btnDelete = document.createElement('button');
+                    btnDelete.className = 'btn btn-sm btn-outline-danger';
+                    btnDelete.textContent = 'Eliminar';
+                    btnDelete.onclick = function() { confirmDelete(m.id, m.nombre); };
+                    tdActions.appendChild(btnDelete);
+
+                    tr.appendChild(tdActions);
                     tbody.appendChild(tr);
                 });
             }).catch(function(err){
@@ -201,17 +261,25 @@ if (!puedeRealizar('gestionar_usuarios')) {
         tryFetch(0);
     }
 
-    function escapeHtml(s){ if (!s) return ''; return String(s).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-    function quote(s){ return JSON.stringify(s || ''); }
+    function escapeHtml(s){ if (!s) return ''; return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
-    document.getElementById('btnNuevo').onclick = function(){
-        var name = prompt('Nombre de la nueva modalidad:');
-        if (!name) return;
-        fetch('citas/crear_modalidad.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:name})})
+    document.getElementById('btnNuevo').onclick = function() {
+        document.getElementById('add_nombre').value = '';
+        document.getElementById('addAlert').innerHTML = '';
+        openModal('addModal');
+    };
+
+    document.getElementById('saveAdd').onclick = function() {
+        var nombre = document.getElementById('add_nombre').value.trim();
+        if (!nombre) { showAlert(document.getElementById('addAlert'),'Nombre requerido','warning'); return; }
+        this.disabled = true;
+        fetch('citas/crear_modalidad.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre:nombre})})
             .then(parseJsonOrError)
-            .then(j=>{ if (j.success) fetchLista(); else alert('Error: '+(j.error||'')); })
-            .catch(e=>alert('Error: '+e.message));
-    }
+            .then(j=>{
+                this.disabled = false;
+                if (j.success) { closeModal('addModal'); fetchLista(); } else { showAlert(document.getElementById('addAlert'), j.error || 'Error'); }
+            }).catch(e=>{ this.disabled=false; showAlert(document.getElementById('addAlert'), 'Error: '+e.message); });
+    };
 
     function openEdit(id, nombre){
         document.getElementById('edit_id').value = id;

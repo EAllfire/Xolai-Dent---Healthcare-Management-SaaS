@@ -28,7 +28,7 @@ if (!isset($_FILES['imagen']) || $_FILES['imagen']['error'] !== UPLOAD_ERR_OK) {
     exit;
 }
 
-$uploaddir = __DIR__ . '/../assets/modalidades/';
+$uploaddir = __DIR__ . '/../images/modalidades/';
 if (!is_dir($uploaddir)) mkdir($uploaddir, 0755, true);
 
 $file = $_FILES['imagen'];
@@ -50,7 +50,7 @@ if (!move_uploaded_file($file['tmp_name'], $target)) {
 @chmod($target, 0644);
 
 // public relative path under project root
-$relpath = 'assets/modalidades/' . $filename;
+$relpath = 'images/modalidades/' . $filename;
 
 // Optionally skip updating DB if caller set store_db=0 (useful if you prefer only filesystem storage)
 $store_db = 1;

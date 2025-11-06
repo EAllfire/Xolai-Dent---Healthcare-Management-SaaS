@@ -1359,7 +1359,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
   </div>
   <!-- Modal para agendar cita -->
   <!-- Modal mejorado para agendar cita -->
-  <div id="modalAgendar" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:10000;align-items:center;justify-content:center;overflow-y:auto;">
+  <div id="modalAgendar" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:10000;align-items:flex-start;justify-content:center;overflow-y:auto;padding-top:5vh;">
     <div style="background:#fff;border-radius:12px;max-width:800px;width:95%;margin:20px;position:relative;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
       <!-- Header del modal -->
       <div style="background: #1275a0;color:white;padding:20px 32px;border-radius:12px 12px 0 0;position:relative;">
@@ -1742,107 +1742,213 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     }
 
     // Paciente autocompletar y registro
-    let pacientesList = [];
     let pacienteInput = document.getElementById('agendarPaciente');
     let pacientesDropdown = document.getElementById('pacientesDropdown');
+    let registroPacienteBox = document.getElementById('registroPacienteBox');
+    let btnGuardarPaciente = document.getElementById('btnGuardarPaciente');
+    let formTitulo = registroPacienteBox.querySelector('h5');
 
-    fetch('pacientes_json.php')
-      .then(r => r.json())
-      .then(data => {
-        pacientesList = data;
-      });
+    // Variable para guardar el ID del paciente que se está editando
+    let editingPacienteId = null;
 
-    function renderPacientesDropdown(filtro) {
-      pacientesDropdown.innerHTML = '';
-      let filtroLower = filtro.toLowerCase();
-      let filtrados = pacientesList.filter(p => p.nombre.toLowerCase().includes(filtroLower));
-      if (filtrados.length === 0) {
-        pacientesDropdown.style.display = 'none';
-        return;
-      }
-      filtrados.forEach(p => {
-        let item = document.createElement('div');
-        item.textContent = p.nombre;
-        item.style.padding = '6px 10px';
-        item.style.cursor = 'pointer';
-        item.onclick = function() {
-          pacienteInput.value = p.nombre;
-          pacienteInput.dataset.pacienteId = p.id;
-          pacientesDropdown.style.display = 'none';
+    // Debounce utility para no sobrecargar el servidor con requests
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
         };
-        pacientesDropdown.appendChild(item);
-      });
-      pacientesDropdown.style.display = 'block';
     }
 
-    pacienteInput.addEventListener('input', function() {
-      let val = pacienteInput.value.trim();
-      if (val.length > 0) {
-        renderPacientesDropdown(val);
-      } else {
-        pacientesDropdown.style.display = 'none';
-      }
-    });
-    pacienteInput.addEventListener('focus', function() {
-      if (pacienteInput.value.trim().length > 0) {
-        renderPacientesDropdown(pacienteInput.value.trim());
-      }
-    });
-    pacienteInput.addEventListener('blur', function() {
-      setTimeout(function() { pacientesDropdown.style.display = 'none'; }, 150);
+    // Función para buscar pacientes en el servidor
+    async function fetchPacientes(term) {
+        if (term.length < 1) {
+            pacientesDropdown.style.display = 'none';
+            return;
+        }
+        try {
+            const response = await fetch(`pacientes_json.php?term=${encodeURIComponent(term)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const pacientes = await response.json();
+            renderPacientesDropdown(pacientes);
+        } catch (error) {
+            console.error("Error fetching pacientes:", error);
+            pacientesDropdown.style.display = 'none';
+        }
+    }
+
+    // Función para mostrar los resultados de la búsqueda
+    function renderPacientesDropdown(pacientes) {
+        pacientesDropdown.innerHTML = '';
+        if (pacientes.length === 0) {
+            pacientesDropdown.style.display = 'none';
+            return;
+        }
+        pacientes.forEach(p => {
+            let item = document.createElement('div');
+            item.textContent = p.nombre;
+            item.style.padding = '8px 12px';
+            item.style.cursor = 'pointer';
+            item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f0f0f0');
+            item.addEventListener('mouseleave', () => item.style.backgroundColor = '#fff');
+            item.onmousedown = (e) => {
+                e.preventDefault(); // Prevenir que el input pierda el foco
+                seleccionarPaciente(p);
+                pacientesDropdown.style.display = 'none';
+            };
+            pacientesDropdown.appendChild(item);
+        });
+        pacientesDropdown.style.display = 'block';
+    }
+
+    // Función para poblar el formulario con los datos de un paciente seleccionado
+    function seleccionarPaciente(paciente) {
+        pacienteInput.value = paciente.nombre;
+        pacienteInput.dataset.pacienteId = paciente.id; // Guardar ID para el form de la cita
+        
+        // Llenar el formulario de edición
+        document.getElementById('nuevoPacienteNombre').value = paciente.nombre_solo || '';
+        document.getElementById('nuevoPacienteApellido').value = paciente.apellido || '';
+        document.getElementById('nuevoPacienteTelefono').value = paciente.telefono || '';
+        document.getElementById('nuevoPacienteCorreo').value = paciente.correo || '';
+        document.getElementById('nuevoPacienteDiagnostico').value = paciente.diagnostico || '';
+        document.getElementById('nuevoPacienteTipo').value = paciente.tipo || 'adulto';
+        document.getElementById('nuevoPacienteOrigen').value = paciente.origen || 'externo';
+        document.getElementById('nuevoPacienteComentarios').value = paciente.comentarios || '';
+
+        // Cambiar a modo edición
+        editingPacienteId = paciente.id;
+        formTitulo.innerHTML = `<i class="fas fa-user-edit" style="margin-right:8px;color:#6b7280;"></i> Editar Paciente`;
+        btnGuardarPaciente.innerHTML = `<i class="fas fa-save" style="margin-right:6px;"></i> Actualizar Paciente`;
+        btnGuardarPaciente.style.background = '#ff9800'; // Naranja para indicar actualización
+        registroPacienteBox.style.display = 'block';
+    }
+    
+    // Función para limpiar y resetear el formulario para un nuevo paciente
+    function limpiarFormularioPaciente() {
+        document.getElementById('nuevoPacienteNombre').value = '';
+        document.getElementById('nuevoPacienteApellido').value = '';
+        document.getElementById('nuevoPacienteTelefono').value = '';
+        document.getElementById('nuevoPacienteCorreo').value = '';
+        document.getElementById('nuevoPacienteDiagnostico').value = '';
+        document.getElementById('nuevoPacienteTipo').value = 'adulto';
+        document.getElementById('nuevoPacienteOrigen').value = 'externo';
+        document.getElementById('nuevoPacienteComentarios').value = '';
+
+        // Cambiar a modo registro
+        editingPacienteId = null;
+        formTitulo.innerHTML = `<i class="fas fa-user-plus" style="margin-right:8px;color:#6b7280;"></i> Registrar Nuevo Paciente`;
+        btnGuardarPaciente.innerHTML = `<i class="fas fa-save" style="margin-right:6px;"></i> Guardar Paciente`;
+        btnGuardarPaciente.style.background = '#10b981'; // Verde para nuevo registro
+        registroPacienteBox.style.display = 'block';
+        document.getElementById('nuevoPacienteNombre').focus();
+    }
+
+    // Event Listeners para la búsqueda
+    pacienteInput.addEventListener('input', debounce(e => {
+        fetchPacientes(e.target.value.trim());
+    }, 300));
+
+    pacienteInput.addEventListener('blur', () => {
+        // Pequeño delay para permitir el click en el dropdown
+        setTimeout(() => {
+            pacientesDropdown.style.display = 'none';
+        }, 150);
     });
 
+    // Botón "Nuevo" para registrar un paciente
     document.getElementById('btnMostrarRegistroPaciente').onclick = function() {
-      document.getElementById('registroPacienteBox').style.display = 'block';
-      document.getElementById('nuevoPacienteNombre').focus();
+        limpiarFormularioPaciente();
     };
 
-    document.getElementById('btnGuardarPaciente').onclick = function() {
-      let nombre = document.getElementById('nuevoPacienteNombre').value.trim();
-      let apellido = document.getElementById('nuevoPacienteApellido').value.trim();
-      let telefono = document.getElementById('nuevoPacienteTelefono').value.trim();
-      let correo = document.getElementById('nuevoPacienteCorreo').value.trim();
-      let comentarios = document.getElementById('nuevoPacienteComentarios').value.trim();
-      let diagnostico = document.getElementById('nuevoPacienteDiagnostico').value.trim();
-      let tipo = document.getElementById('nuevoPacienteTipo').value;
-      let origen = document.getElementById('nuevoPacienteOrigen').value;
+    // Botón para Guardar (nuevo) o Actualizar (existente) un paciente
+    btnGuardarPaciente.onclick = async function() {
+        const pacienteData = {
+            id: editingPacienteId, // Será null si es un nuevo paciente
+            nombre: document.getElementById('nuevoPacienteNombre').value.trim(),
+            apellido: document.getElementById('nuevoPacienteApellido').value.trim(),
+            telefono: document.getElementById('nuevoPacienteTelefono').value.trim(),
+            correo: document.getElementById('nuevoPacienteCorreo').value.trim(),
+            diagnostico: document.getElementById('nuevoPacienteDiagnostico').value.trim(),
+            tipo: document.getElementById('nuevoPacienteTipo').value,
+            origen: document.getElementById('nuevoPacienteOrigen').value,
+            comentarios: document.getElementById('nuevoPacienteComentarios').value.trim(),
+        };
 
-      if (nombre && apellido) {
-        let formData = new FormData();
-        formData.append('nombre', nombre);
-        formData.append('apellido', apellido);
-        formData.append('telefono', telefono);
-        formData.append('correo', correo);
-        formData.append('diagnostico', diagnostico);
-        formData.append('tipo', tipo);
-        formData.append('origen', origen);
-        formData.append('comentarios', comentarios);
+        if (!pacienteData.nombre || !pacienteData.apellido) {
+            alert('Por favor ingresa nombre y apellido del paciente.');
+            return;
+        }
 
-        fetch('guardar_paciente.php', {
-          method: 'POST',
-          body: formData
-        })
-        .then(r => r.json())
-        .then(resp => {
-          if (resp.success && resp.id) {
-            pacientesList.push({id: resp.id, nombre: `${nombre} ${apellido}`});
-            pacienteInput.value = `${nombre} ${apellido}`;
-            pacienteInput.dataset.pacienteId = resp.id;
-            document.getElementById('registroPacienteBox').style.display = 'none';
-            alert('Paciente registrado correctamente.');
-          } else {
-            alert('Error al guardar paciente: ' + (resp.error || ''));
-          }
-        });
-      } else {
+        const url = editingPacienteId ? 'actualizar_paciente.php' : 'guardar_paciente.php';
+        const method = 'POST';
 
+        try {
+            let body;
+            let headers = {};
 
-        alert('Por favor ingresa nombre y apellido del paciente.');
-      }
+            if (editingPacienteId) {
+                headers['Content-Type'] = 'application/json';
+                body = JSON.stringify(pacienteData);
+            } else {
+                // Para guardar_paciente.php, que espera FormData/urlencoded
+                const formData = new FormData();
+                for (const key in pacienteData) {
+                    if (pacienteData[key] !== null) {
+                        formData.append(key, pacienteData[key]);
+                    }
+                }
+                body = formData;
+            }
+
+            const response = await fetch(url, { method, headers, body });
+            const resp = await response.json();
+
+            if (resp.success) {
+                const nombreCompleto = `${pacienteData.nombre} ${pacienteData.apellido}`;
+                alert(`Paciente ${editingPacienteId ? 'actualizado' : 'registrado'} correctamente.`);
+                
+                pacienteInput.value = nombreCompleto;
+                pacienteInput.dataset.pacienteId = resp.id;
+
+                if (!editingPacienteId) {
+                    registroPacienteBox.style.display = 'none';
+                }
+                
+                // Construct the object that `seleccionarPaciente` expects
+                const pacienteActualizado = {
+                    id: resp.id,
+                    nombre: `${pacienteData.nombre} ${pacienteData.apellido}`,
+                    nombre_solo: pacienteData.nombre,
+                    apellido: pacienteData.apellido,
+                    telefono: pacienteData.telefono,
+                    correo: pacienteData.correo,
+                    diagnostico: pacienteData.diagnostico,
+                    tipo: pacienteData.tipo,
+                    origen: pacienteData.origen,
+                    comentarios: pacienteData.comentarios
+                };
+                
+                // Re-populate the form with the correct, full data
+                seleccionarPaciente(pacienteActualizado);
+                
+                // Ensure we stay in edit mode with the correct ID
+                editingPacienteId = resp.id;
+
+            } else {
+                alert(`Error al ${editingPacienteId ? 'actualizar' : 'guardar'} paciente: ${resp.error || 'Error desconocido'}`);
+            }
+        } catch (error) {
+            console.error('Error en la operación de paciente:', error);
+            alert('Hubo un error de conexión.');
+        }
     };
 
     document.getElementById('btnCancelarPaciente').onclick = function() {
-      document.getElementById('registroPacienteBox').style.display = 'none';
+      registroPacienteBox.style.display = 'none';
     };
 
     // -- Calendarios y demás lógica --
@@ -2159,7 +2265,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         formData.append('cita_id', citaId);
         formData.append('estado', nuevoEstado);
         
-        fetch('actualizar_estado_clean.php', {
+        fetch('actualizar_estado.php', {
           method: 'POST',
           body: formData
         })
@@ -2287,6 +2393,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           var diagnostico = event.extendedProps.diagnostico || '';
           var pago = event.extendedProps.pago || 'No pagado';
           var estadoActual = event.extendedProps.estado || '';
+          var tipoPaciente = event.extendedProps.tipo_paciente || ''; // Added patient type
+          console.log('Event extendedProps:', event.extendedProps);
+          console.log('Tipo de paciente:', tipoPaciente);
           
           // Definir todos los estados y sus colores
           var todosLosEstados = [
@@ -2319,6 +2428,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
               <div style='margin-bottom:6px;color:#374151;font-weight:500;'>${servicio}</div>
               <div style='font-size:14px;color:#6b7280;margin-bottom:4px;'><span style='margin-right:8px;'>🕒</span>${horaInicio} - ${horaFin}</div>
               <div style='font-size:14px;color:#6b7280;margin-bottom:4px;'><span style='margin-right:8px;'>💲</span>${pago}</div>
+              ${tipoPaciente ? `<div style='font-size:14px;color:#6b7280;margin-bottom:4px;'><span style='margin-right:8px;'>👤</span>${tipoPaciente}</div>` : ''}
               <div class='estado-puntos' style='margin:8px 0;'>
                 <span style='font-size:12px; margin-right:8px; color:#374151; font-weight:600;'>Estados:</span>
                 ${estadoPuntos}
@@ -2514,17 +2624,50 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         //   contextMenu.style.top = info.jsEvent.pageY + 'px';
         // },
         select: function(selectionInfo) {
-          // selectionInfo contains start and end Date objects when user selects multiple slots
           lastDateClickInfo = selectionInfo;
+          
           // Pre-fill booking modal with selection
           var fecha = selectionInfo.start.toISOString().split('T')[0];
           var horaInicio = selectionInfo.start.toTimeString().substring(0,5);
           var horaFin = (selectionInfo.end) ? selectionInfo.end.toTimeString().substring(0,5) : '';
+          
           document.getElementById('agendarFecha').value = fecha;
           document.getElementById('agendarHoraInicio').value = horaInicio;
-          if (document.getElementById('agendarHoraFin')) document.getElementById('agendarHoraFin').value = horaFin;
+          if (document.getElementById('agendarHoraFin')) {
+            document.getElementById('agendarHoraFin').value = horaFin;
+          }
+          
+          // Handle resource (modalidad) selection
+          var modalidadLabel = document.getElementById('modalidadSeleccionadaLabel');
+          var modalidadNombre = '';
+          var modalidadId = '';
+          
+          if (selectionInfo.resource) {
+            modalidadNombre = selectionInfo.resource.title || '';
+            modalidadId = selectionInfo.resource.id || '';
+          }
+          
+          modalidadLabel.textContent = modalidadNombre ? modalidadNombre : 'Por favor, seleccione una modalidad.';
+          document.getElementById('agendarProfesional').value = modalidadId;
+          
+          // Load services for the selected modality
+          cargarServiciosPorModalidad(modalidadId);
+          
+          // Reset patient search and other fields
+          document.getElementById('agendarPaciente').value = '';
+          document.getElementById('agendarPaciente').dataset.pacienteId = '';
+          if (document.getElementById('registroPacienteBox')) {
+            document.getElementById('registroPacienteBox').style.display = 'none';
+          }
+
           // Open the booking modal
           document.getElementById('modalAgendar').style.display = 'flex';
+
+          // Focus on patient input
+          setTimeout(function() {
+            var pacienteInput = document.getElementById('agendarPaciente');
+            if (pacienteInput) pacienteInput.focus();
+          }, 200);
         },
         dateClick: function(info) {
           // Mejorar detección de eventos con múltiples selectores
@@ -3233,7 +3376,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       formData.append('hora_fin', horaFin);
       formData.append('estado_id', estadoId);
       
-      fetch('actualizar_cita_clean.php', {
+      fetch('actualizar_cita.php', {
         method: 'POST',
         body: formData
       })

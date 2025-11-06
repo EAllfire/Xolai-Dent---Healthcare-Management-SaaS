@@ -28,10 +28,17 @@ try {
         $tipo = $conn->real_escape_string($tipo);
         
         $paciente_id = intval($paciente_id);
-        $profesional_id = intval($profesional_id);
         $servicio_id = intval($servicio_id);
         $modalidad_id = intval($modalidad_id);
         $estado_id = intval($estado_id);
+
+        // Modalities that don't require a specific professional
+        $modalidades_sin_profesional = [3, 4, 5, 6, 7, 8]; 
+        if (in_array($modalidad_id, $modalidades_sin_profesional)) {
+            $profesional_id = null;
+        } else {
+            $profesional_id = intval($profesional_id);
+        }
         
         // Verificar empalme de citas
         $sqlEmpalme = "SELECT COUNT(*) as total FROM agenda_citas 
@@ -52,14 +59,16 @@ try {
             $response = ["success" => false, "error" => "Ya existe una cita en ese horario para la modalidad seleccionada."];
         } else {
             // Insertar nueva cita
+            $profesional_id_sql = is_null($profesional_id) ? "NULL" : $profesional_id;
             $sqlInsert = "INSERT INTO agenda_citas (fecha, paciente_id, profesional_id, servicio_id, estado_id, nota_paciente, nota_interna, hora_inicio, hora_fin, modalidad_id, tipo) 
-                         VALUES ('$fecha', $paciente_id, $profesional_id, $servicio_id, $estado_id, '$nota_paciente', '$nota_interna', '$hora_inicio', '$hora_fin', $modalidad_id, '$tipo')";
+                         VALUES ('$fecha', $paciente_id, $profesional_id_sql, $servicio_id, $estado_id, '$nota_paciente', '$nota_interna', '$hora_inicio', '$hora_fin', $modalidad_id, '$tipo')";
             
             if ($conn->query($sqlInsert)) {
                 $id = $conn->insert_id;
                 $response = ["success" => true, "id" => $id];
             } else {
-                $response = ["success" => false, "error" => "Error al insertar: " . $conn->error];
+                $debug_info = " | Modalidad ID: " . $modalidad_id . " | Profesional ID (before): " . ($_POST['profesional_id'] ?? 'not set') . " | Profesional ID (after): " . (is_null($profesional_id) ? 'NULL' : $profesional_id) . " | Profesional ID (SQL): " . $profesional_id_sql;
+                $response = ["success" => false, "error" => "Error al insertar: " . $conn->error . $debug_info];
             }
         }
     } else {

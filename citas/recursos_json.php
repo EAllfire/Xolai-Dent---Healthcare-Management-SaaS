@@ -54,8 +54,8 @@ while ($row = $result->fetch_assoc()) {
         }
     }
     $recursos[] = [
-        'id' => $row['id'],
-        'title' => $row['nombre'],
+        'id' => trim($row['id']),
+        'title' => trim($row['nombre']),
         'eventColor' => $color,
         'imagen' => $img
     ];

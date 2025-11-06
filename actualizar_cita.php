@@ -1,139 +1,103 @@
 <?php
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+ini_set('log_errors', 1);
+
 header('Content-Type: application/json');
+
+ob_start();
+ob_clean();
 
 try {
     require_once("includes/db.php");
-} catch (Exception $e) {
-    echo json_encode(["success" => false, "error" => "Error conexión DB: " . $e->getMessage()]);
-    exit;
-}
 
-$response = [];
-
-try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cita_id = $_POST['cita_id'] ?? '';
         $fecha = $_POST['fecha'] ?? '';
         $hora_inicio = $_POST['hora_inicio'] ?? '';
         $hora_fin = $_POST['hora_fin'] ?? '';
         $estado_id = $_POST['estado_id'] ?? '';
-        $nota_paciente = $_POST['nota_paciente'] ?? '';
-        $nota_interna = $_POST['nota_interna'] ?? '';
         
-        // Validaciones básicas
-        if (empty($cita_id) || empty($fecha) || empty($hora_inicio) || empty($hora_fin)) {
-            echo json_encode(['success' => false, 'error' => "Faltan datos - cita_id: '$cita_id', fecha: '$fecha', hora_inicio: '$hora_inicio', hora_fin: '$hora_fin'"]);
+        if (empty($cita_id) || empty($fecha) || empty($hora_inicio) || empty($hora_fin) || empty($estado_id)) {
+            echo json_encode(['success' => false, 'error' => "Faltan datos obligatorios."]);
             exit;
         }
         
-        if (!is_numeric($cita_id)) {
-            echo json_encode(['success' => false, 'error' => 'cita_id debe ser numérico']);
+        if (!is_numeric($cita_id) || !is_numeric($estado_id)) {
+            echo json_encode(['success' => false, 'error' => 'ID de cita y estado deben ser numéricos.']);
             exit;
         }
         
-        // Escapar valores
         $cita_id = intval($cita_id);
-        $fecha = $conn->real_escape_string($fecha);
-        $hora_inicio = $conn->real_escape_string($hora_inicio);
-        $hora_fin = $conn->real_escape_string($hora_fin);
-        $nota_paciente = $conn->real_escape_string($nota_paciente);
-        $nota_interna = $conn->real_escape_string($nota_interna);
-        
-        // Construir consulta de actualización
-        $sql = "UPDATE agenda_citas SET 
-                fecha = '$fecha', 
-                hora_inicio = '$hora_inicio', 
-                hora_fin = '$hora_fin'";
-        
-        if ($estado_id && is_numeric($estado_id)) {
-            $estado_id = intval($estado_id);
-            $sql .= ", estado_id = $estado_id";
-        }
-        
-        if ($nota_paciente !== '') {
-            $sql .= ", nota_paciente = '$nota_paciente'";
-        }
-        
-        if ($nota_interna !== '') {
-            $sql .= ", nota_interna = '$nota_interna'";
-        }
-        
-        $sql .= " WHERE id = $cita_id";
-        
-        if ($conn->query($sql)) {
-            $response = ['success' => true, 'message' => 'Cita actualizada correctamente'];
-        } else {
-            $response = ['success' => false, 'error' => 'Error SQL: ' . $conn->error];
-        }
-    } else {
-        $response = ['success' => false, 'error' => 'Método no permitido: ' . $_SERVER['REQUEST_METHOD']];
-    }
-} catch (Exception $e) {
-    $response = ['success' => false, 'error' => 'Excepción: ' . $e->getMessage()];
-}
+        $estado_id = intval($estado_id);
 
-echo json_encode($response);
-?>
-        if (!$conn) {
-            // En modo demo sin base de datos
-            echo json_encode(['success' => true, 'message' => 'Cita actualizada (modo demo)']);
+        // 1. Verificar que la cita existe y obtener modalidad_id
+        $stmt_check = $conn->prepare("SELECT modalidad_id FROM agenda_citas WHERE id = ?");
+        if ($stmt_check === false) {
+            throw new Error('Prepare failed (select): ' . $conn->error);
+        }
+        $stmt_check->bind_param("i", $cita_id);
+        $stmt_check->execute();
+        $stmt_check->store_result();
+
+        if ($stmt_check->num_rows === 0) {
+            echo json_encode(['success' => false, 'error' => 'Cita no encontrada.']);
+            $stmt_check->close();
             exit;
         }
         
-        // Verificar que la cita existe
-        $stmt = $conn->prepare("SELECT id FROM agenda_citas WHERE id = ?");
-        $stmt->bind_param("i", $cita_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($result->num_rows === 0) {
-            echo json_encode(['success' => false, 'error' => 'Cita no encontrada']);
-            exit;
-        }
-        
-        // Verificar solapamiento de horarios (excluyendo la cita actual)
-        $stmt = $conn->prepare("
+        $stmt_check->bind_result($modalidad_id);
+        $stmt_check->fetch();
+        $stmt_check->close();
+
+        // 2. Verificar solapamiento de horarios
+        $stmt_overlap = $conn->prepare("
             SELECT COUNT(*) as total 
             FROM agenda_citas 
             WHERE fecha = ? 
             AND id != ?
-            AND modalidad_id = (SELECT modalidad_id FROM agenda_citas WHERE id = ?)
-            AND (
-                (hora_inicio < ? AND hora_fin > ?) OR
-                (hora_inicio < ? AND hora_fin > ?) OR
-                (hora_inicio >= ? AND hora_fin <= ?)
-            )
+            AND modalidad_id = ?
+            AND hora_inicio < ? AND hora_fin > ?
         ");
-        $stmt->bind_param("siisssss", $fecha, $cita_id, $cita_id, $hora_fin, $hora_inicio, $hora_inicio, $hora_fin, $hora_inicio, $hora_fin);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
+        if ($stmt_overlap === false) {
+            throw new Error('Prepare failed (overlap check): ' . $conn->error);
+        }
+        $stmt_overlap->bind_param("siiss", $fecha, $cita_id, $modalidad_id, $hora_fin, $hora_inicio);
+        $stmt_overlap->execute();
+        $stmt_overlap->bind_result($total_solapamientos);
+        $stmt_overlap->fetch();
+        $stmt_overlap->close();
         
-        if ($row['total'] > 0) {
-            echo json_encode(['success' => false, 'error' => 'Ya existe una cita en ese horario para la misma modalidad']);
+        if ($total_solapamientos > 0) {
+            echo json_encode(['success' => false, 'error' => 'Ya existe una cita en ese horario para la misma modalidad.']);
             exit;
         }
         
-        // Actualizar la cita
-        $stmt = $conn->prepare("
+        // 3. Actualizar la cita
+        $stmt_update = $conn->prepare("
             UPDATE agenda_citas 
             SET fecha = ?, hora_inicio = ?, hora_fin = ?, estado_id = ?
             WHERE id = ?
         ");
-        $stmt->bind_param("sssii", $fecha, $hora_inicio, $hora_fin, $estado_id, $cita_id);
-        
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Cita actualizada correctamente']);
-        } else {
-            echo json_encode(['success' => false, 'error' => 'Error al actualizar la cita']);
+        if ($stmt_update === false) {
+            throw new Error('Prepare failed (update): ' . $conn->error);
         }
+        $stmt_update->bind_param("sssii", $fecha, $hora_inicio, $hora_fin, $estado_id, $cita_id);
+        
+        if ($stmt_update->execute()) {
+            echo json_encode(['success' => true, 'message' => 'Cita actualizada correctamente.']);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Error al actualizar la cita: ' . $stmt_update->error]);
+        }
+        $stmt_update->close();
         
     } else {
-        echo json_encode(['success' => false, 'error' => 'Método no permitido']);
+        echo json_encode(['success' => false, 'error' => 'Método no permitido.']);
     }
     
-} catch (Exception $e) {
-    error_log("Error en actualizar_cita.php: " . $e->getMessage());
-    echo json_encode(['success' => false, 'error' => 'Error interno del servidor']);
+} catch (Throwable $t) {
+    error_log("Error fatal en actualizar_cita.php: " . $t->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Error interno del servidor. Por favor, contacte al administrador.', 'details' => $t->getMessage()]);
 }
 ?>

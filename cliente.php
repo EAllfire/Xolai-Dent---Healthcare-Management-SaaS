@@ -490,7 +490,7 @@
                 
                 for (const modalidad of modalidades) {
                     // Obtener servicios de esta modalidad
-                    const serviciosResponse = await fetch(`servicios_por_modalidad.php?modalidad_id=${modalidad.id}`);
+                    const serviciosResponse = await fetch(`citas/servicios_por_modalidad.php?modalidad_id=${modalidad.id}`);
                     const servicios = await serviciosResponse.json();
                     
                     const color = getModalidadColor(modalidad.title);
