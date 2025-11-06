@@ -1,20 +1,30 @@
 <?php
+require_once 'includes/db.php';
+
 header('Content-Type: application/json');
 
-$test_data = [
-    [
-        "id" => 1,
-        "nombre" => "Test Paciente 1",
-        "limite_citas_diarias" => 5,
-        "descripcion" => "Esto es un dato de prueba"
-    ],
-    [
-        "id" => 2,
-        "nombre" => "Test Paciente 2",
-        "limite_citas_diarias" => 10000,
-        "descripcion" => "Otro dato de prueba"
-    ]
-];
+try {
+    $query = "SELECT id, nombre, descripcion, limite_citas_diarias FROM agenda_tipos_paciente ORDER BY nombre";
+    $result = $conn->query($query);
 
-echo json_encode($test_data);
+    if (!$result) {
+        throw new Exception("Error en la consulta: " . $conn->error);
+    }
+
+    $tipos = [];
+    while ($row = $result->fetch_assoc()) {
+        // Asegurarse de que los valores numéricos se traten como números
+        $row['id'] = intval($row['id']);
+        $row['limite_citas_diarias'] = intval($row['limite_citas_diarias']);
+        $tipos[] = $row;
+    }
+
+    echo json_encode($tipos);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
+}
+
+$conn->close();
 ?>

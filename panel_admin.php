@@ -215,6 +215,12 @@ $show_admin_tools = $puede_gestionar_usuarios;
       <span>Usuarios</span>
       <small style="color:#6b7280;margin-top:8px">Crear, editar y asignar permisos</small>
     </a>
+
+    <a href="admin_tipos_paciente.php" class="admin-card" title="Tipos de Paciente">
+      <i class="fa-solid fa-users-gear"></i>
+      <span>Tipos de Paciente</span>
+      <small style="color:#6b7280;margin-top:8px">Gestionar los tipos de paciente</small>
+    </a>
   </div>
 </main>
 
