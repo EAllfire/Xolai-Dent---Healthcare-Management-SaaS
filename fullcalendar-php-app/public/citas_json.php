@@ -5,14 +5,14 @@ header('Content-Type: application/json');
 // Tu consulta SQL debe devolver los campos necesarios
 $sql = "SELECT c.id, c.fecha, c.hora_inicio, c.hora_fin, c.modalidad_id, c.estado_id, e.nombre AS estado,
     p.nombre AS paciente, p.tipo AS tipo_paciente, p.telefono, p.alergias AS diagnostico, 
-    s.nombre AS servicio, s.id AS servicio_id
+    s.nombre AS servicio, s.id AS servicio_id, s.precio
   FROM agenda_citas c
   JOIN portal_pacientes p ON c.paciente_id = p.id
   JOIN portal_servicios s ON c.servicio_id = s.id
   JOIN agenda_estado_cita e ON c.estado_id = e.id";
 $sql = "SELECT c.id, c.fecha, c.hora_inicio, c.hora_fin, c.modalidad_id, c.estado_id, e.nombre AS estado,
     p.nombre AS paciente, p.tipo AS tipo_paciente, p.telefono, p.diagnostico, 
-    s.nombre AS servicio, s.id AS servicio_id
+    s.nombre AS servicio, s.id AS servicio_id, s.precio
   FROM citas c
   JOIN portal_pacientes p ON c.paciente_id = p.id
   JOIN portal_servicios s ON c.servicio_id = s.id
@@ -56,7 +56,8 @@ while ($row = $result->fetch_assoc()) {
     'extendedProps' => [
       'tipo_paciente' => $row['tipo_paciente'] ?? '',
       'telefono' => $row['telefono'] ?? '',
-      'diagnostico' => $row['diagnostico'] ?? ''
+      'diagnostico' => $row['diagnostico'] ?? '',
+      'pago' => $row['precio'] ?? 'No especificado'
     ]
   ];
 }

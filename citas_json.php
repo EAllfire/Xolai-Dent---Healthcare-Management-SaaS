@@ -3,7 +3,7 @@ require_once("includes/db.php");
 
 $sql = "SELECT c.id, c.fecha, c.hora_inicio, c.hora_fin, c.modalidad_id, c.estado_id, e.nombre AS estado,
     p.nombre AS paciente, p.tipo AS tipo_paciente, p.telefono, p.alergias AS diagnostico,
-    s.nombre AS servicio, s.id AS servicio_id
+    s.nombre AS servicio, s.id AS servicio_id, s.precio
   FROM agenda_citas c
   JOIN portal_pacientes p ON c.paciente_id = p.id
   JOIN portal_servicios s ON c.servicio_id = s.id
@@ -46,7 +46,7 @@ while ($row = $result->fetch_assoc()) {
       'telefono' => $row['telefono'] ?? '',
       'diagnostico' => $row['diagnostico'] ?? '',
       'tipo_paciente' => $row['tipo_paciente'] ?? '',
-      'pago' => 'No especificado'
+      'pago' => (isset($row['precio']) && $row['precio'] > 0) ? '$' . number_format($row['precio'], 2) : 'No especificado'
     ];
 }
 

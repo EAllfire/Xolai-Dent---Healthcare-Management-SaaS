@@ -14,9 +14,9 @@
     
     <style>
         :root {
-            --primary-color: #1f2937;
+            --primary-color: #1275a0;
             --secondary-color: #3b82f6;
-            --accent-color: #10b981;
+            --accent-color: #0f5f85 100%;
             --light-bg: #f8fafc;
             --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
@@ -168,7 +168,7 @@
         }
 
         .book-btn {
-            background: linear-gradient(135deg, var(--accent-color), #059669);
+            background: linear-gradient(135deg, var(--accent-color), #0f5f85 100%);
             color: white;
             border: none;
             padding: 0.75rem 2rem;
@@ -181,7 +181,7 @@
 
         .book-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 8px 16px -4px #0f5f85 100%;
         }
 
         /* Loading State */
@@ -332,7 +332,7 @@
                 descripcion: 'Estudios de rayos X con equipos digitales de alta resolución'
             },
             'resonancia': { 
-                color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                color: 'linear-gradient(135deg, #6b7280, #4b5563)',
                 icon: 'fas fa-brain',
                 descripcion: 'Resonancia magnética con tecnología de vanguardia'
             },
@@ -388,7 +388,7 @@
                 document.getElementById('modalidad-icono').innerHTML = `<i class="${config.icon}"></i>`;
 
                 // Cargar servicios
-                const response = await fetch(`servicios_por_modalidad.php?modalidad_id=${modalidadId}`);
+                const response = await fetch(`citas/servicios_por_modalidad.php?modalidad_id=${modalidadId}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);

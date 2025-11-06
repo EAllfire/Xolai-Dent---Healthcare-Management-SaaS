@@ -16,7 +16,7 @@
         :root {
             --primary-color: #1f2937;
             --secondary-color: #3b82f6;
-            --accent-color: #10b981;
+            --accent-color:#0f5f85 100%;
             --light-bg: #f8fafc;
             --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
@@ -118,7 +118,7 @@
         }
 
         .package-card.featured {
-            background: linear-gradient(135deg, var(--accent-color), #059669);
+            background: linear-gradient(135deg, var(--accent-color), #0f5f85 100%);
             color: white;
             transform: scale(1.05);
         }
@@ -146,7 +146,7 @@
             font-size: 2rem;
             color: white;
             margin: 0 auto 1rem;
-            background: linear-gradient(135deg, var(--accent-color), #059669);
+            background: linear-gradient(135deg, var(--accent-color), #0f5f85 100%);
         }
 
         .package-card.featured .package-icon {
@@ -227,9 +227,9 @@
         }
 
         .book-btn:hover {
-            background: #059669;
+            background: #0f5f85 100%;
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 8px 16px -4px #144458ff 100%;
         }
 
         .package-card.featured .book-btn {
@@ -239,7 +239,7 @@
 
         .package-card.featured .book-btn:hover {
             background: #f9fafb;
-            color: #059669;
+            color: #0f5f85 100%;
         }
 
         .popular-badge {

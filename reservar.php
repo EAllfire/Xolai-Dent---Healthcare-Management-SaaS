@@ -18,7 +18,7 @@
         :root {
             --primary-color: #1f2937;
             --secondary-color: #3b82f6;
-            --accent-color: #10b981;
+            --accent-color: #0f5f85;
             --light-bg: #f8fafc;
             --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --danger-color: #ef4444;
@@ -78,7 +78,7 @@
         }
 
         .card-header {
-            background: linear-gradient(135deg, var(--accent-color), #059669);
+            background: linear-gradient(135deg, var(--accent-color), #0f5f85 100%);
             color: white;
             padding: 2rem;
             text-align: center;
@@ -249,7 +249,7 @@
 
         .alert-success {
             background: #f0fdf4;
-            color: #059669;
+            color: #0f5f85 100%;
             border-left: 4px solid var(--accent-color);
         }
 
@@ -270,9 +270,9 @@
         }
 
         .btn-primary:hover {
-            background: #059669;
+            background: #0f5f85 100%;
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 8px 16px -4px #144458ff 100%;
         }
 
         .btn-secondary {

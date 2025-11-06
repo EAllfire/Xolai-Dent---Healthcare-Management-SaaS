@@ -22,10 +22,9 @@ while ($row = $result->fetch_assoc()) {
     $color = '#1976d2'; // Por defecto
     if (strpos($row['nombre'], 'Laboratorios') !== false) {
         $color = '#388e3c'; // Verde para laboratorios
-    } elseif (strpos($row['nombre'], 'Radiografía') !== false) {
-        $color = '#1976d2'; // Azul para radiografía
-    } elseif (strpos($row['nombre'], 'Resonancia') !== false) {
-        $color = '#7b1fa2'; // Púrpura para resonancia
+
+
+
     } elseif (strpos($row['nombre'], 'Tomografía') !== false) {
         $color = '#5d4037'; // Marrón para tomografía
     } elseif (strpos($row['nombre'], 'Mastografía') !== false) {

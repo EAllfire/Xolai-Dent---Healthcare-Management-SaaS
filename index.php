@@ -1518,11 +1518,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
               <div>
-                <label style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Modalidad:</label>
-                <input type="hidden" id="agendarProfesional" name="profesional" />
-                <div id="modalidadSeleccionadaLabel" style="display:block;padding:10px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-size:14px;color:#6b7280;">
-                  Seleccionar modalidad
-                </div>
+                <label for="agendarModalidad" style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Modalidad:</label>
+                <select id="agendarModalidad" name="modalidad_id" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+                  <option value="">Seleccione una modalidad</option>
+                </select>
               </div>
               <div>
                 <label for="agendarServicio" style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Servicio:</label>
@@ -2394,8 +2393,6 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           var pago = event.extendedProps.pago || 'No pagado';
           var estadoActual = event.extendedProps.estado || '';
           var tipoPaciente = event.extendedProps.tipo_paciente || ''; // Added patient type
-          console.log('Event extendedProps:', event.extendedProps);
-          console.log('Tipo de paciente:', tipoPaciente);
           
           // Definir todos los estados y sus colores
           var todosLosEstados = [
@@ -2638,17 +2635,16 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           }
           
           // Handle resource (modalidad) selection
-          var modalidadLabel = document.getElementById('modalidadSeleccionadaLabel');
-          var modalidadNombre = '';
+          var agendarModalidadSelect = document.getElementById('agendarModalidad');
           var modalidadId = '';
           
           if (selectionInfo.resource) {
-            modalidadNombre = selectionInfo.resource.title || '';
             modalidadId = selectionInfo.resource.id || '';
           }
           
-          modalidadLabel.textContent = modalidadNombre ? modalidadNombre : 'Por favor, seleccione una modalidad.';
-          document.getElementById('agendarProfesional').value = modalidadId;
+          if (agendarModalidadSelect) {
+            agendarModalidadSelect.value = modalidadId;
+          }
           
           // Load services for the selected modality
           cargarServiciosPorModalidad(modalidadId);
@@ -3131,15 +3127,14 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         document.getElementById('agendarHoraFin').value = horaFin;
         document.getElementById('agendarPaciente').value = '';
         document.getElementById('agendarServicio').value = '';
-        var modalidadLabel = document.getElementById('modalidadSeleccionadaLabel');
-        var modalidadNombre = '';
+        var agendarModalidadSelect = document.getElementById('agendarModalidad');
         var modalidadId = '';
         if (lastDateClickInfo && lastDateClickInfo.resource) {
-          modalidadNombre = lastDateClickInfo.resource.title || '';
           modalidadId = lastDateClickInfo.resource.id || '';
         }
-        modalidadLabel.textContent = modalidadNombre ? modalidadNombre : '(No seleccionado)';
-        document.getElementById('agendarProfesional').value = modalidadId;
+        if (agendarModalidadSelect) {
+          agendarModalidadSelect.value = modalidadId;
+        }
         cargarServiciosPorModalidad(modalidadId);
         document.getElementById('modalAgendar').style.display = 'flex';
         
@@ -3160,9 +3155,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         var horaInicio = document.getElementById('agendarHoraInicio').value;
         var horaFin = document.getElementById('agendarHoraFin').value;
         var pacienteId = pacienteInput.dataset.pacienteId || '';
-        var profesionalId = document.getElementById('agendarProfesional').value;
+        var modalidadId = document.getElementById('agendarModalidad').value;
         var servicioId = document.getElementById('agendarServicio').value;
-        var modalidadId = profesionalId;
+        var profesionalId = modalidadId; // Use the selected modalityId as profesionalId
         var estadoId = document.getElementById('agendarEstado').value;
         var notaInterna = document.getElementById('notaInterna').value;
         var notaPaciente = document.getElementById('notaPaciente').value;
@@ -3251,26 +3246,52 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       if (horaFinInput) horaFinInput.value = '';
     }
 
-    // If a modalidad is selected in the sidebar, pre-populate services and label
-    var modalidadSelect = document.getElementById('profesional-select');
-    if (modalidadSelect) {
-      var modalidadId = modalidadSelect.value;
-      if (modalidadId && modalidadId !== 'todos') {
-        document.getElementById('agendarProfesional').value = modalidadId;
-        var label = document.getElementById('modalidadSeleccionadaLabel');
-        if (label) label.textContent = modalidadSelect.selectedOptions[0].textContent || 'Seleccionar modalidad';
-        // Load services for that modalidad
-        cargarServiciosPorModalidad(modalidadId);
-      } else {
-        // Clear servicios select
-        var servicioSelect = document.getElementById('agendarServicio');
-        if (servicioSelect) {
-          servicioSelect.innerHTML = '<option value="">Seleccione un servicio</option>';
-        }
-        var label = document.getElementById('modalidadSeleccionadaLabel');
-        if (label) label.textContent = 'Seleccionar modalidad';
-      }
+    // Populate agendarModalidad select
+    var agendarModalidadSelect = document.getElementById('agendarModalidad');
+    if (agendarModalidadSelect) {
+      agendarModalidadSelect.innerHTML = '<option value="">Seleccione una modalidad</option>'; // Clear existing options
+
+      fetchJsonDebug('citas/recursos_json.php')
+        .then(function(data) {
+          data.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = item.title;
+            agendarModalidadSelect.appendChild(opt);
+          });
+
+          var initialModalidadId = '';
+          if (typeof lastDateClickInfo !== 'undefined' && lastDateClickInfo && lastDateClickInfo.resource) {
+            initialModalidadId = lastDateClickInfo.resource.id || '';
+          } else {
+            var sidebarModalidadSelect = document.getElementById('profesional-select');
+            if (sidebarModalidadSelect && sidebarModalidadSelect.value !== 'todos') {
+              initialModalidadId = sidebarModalidadSelect.value;
+            }
+          }
+
+          if (initialModalidadId) {
+            agendarModalidadSelect.value = initialModalidadId;
+            cargarServiciosPorModalidad(initialModalidadId);
+          } else {
+            var servicioSelect = document.getElementById('agendarServicio');
+            if (servicioSelect) {
+              servicioSelect.innerHTML = '<option value="">Seleccione un servicio</option>';
+            }
+          }
+        })
+        .catch(function(err) {
+          console.error('Error cargando modalidades para agendar:', err);
+        });
+
+      agendarModalidadSelect.onchange = function() {
+        cargarServiciosPorModalidad(this.value);
+      };
     }
+    // Ensure the select is enabled and visible
+    agendarModalidadSelect.disabled = false;
+    agendarModalidadSelect.style.opacity = '1';
+    agendarModalidadSelect.style.cursor = 'pointer';
 
     // Show modal and focus patient input
     if (modal) {
