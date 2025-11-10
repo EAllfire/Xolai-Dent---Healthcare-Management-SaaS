@@ -1259,9 +1259,6 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           <i class="fas fa-file-alt"></i> Reporte
         </a>
         <?php if ($puede_crear_citas): ?>
-          <button onclick="abrirModalAgendar()" class="btn-header">
-            <i class="fas fa-plus"></i> Nueva Cita
-          </button>
         <?php endif; ?>
         <a href="logout.php" class="btn-header">
           <i class="fas fa-sign-out-alt"></i> Salir
@@ -1998,83 +1995,71 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     }
     cargarEstados();
 
-    document.addEventListener('DOMContentLoaded', function() {
+    // --- Funciones Globales para el Modal de Agendar ---
 
-      function cargarServiciosPorModalidad(modalidadId) {
-        var servicioSelect = document.getElementById('agendarServicio');
-        servicioSelect.innerHTML = '';
-        var defaultOpt = document.createElement('option');
-        defaultOpt.value = '';
-        defaultOpt.textContent = 'Seleccione un servicio';
-        servicioSelect.appendChild(defaultOpt);
+    function cargarServiciosPorModalidad(modalidadId) {
+      var servicioSelect = document.getElementById('agendarServicio');
+      servicioSelect.innerHTML = '<option value="">Seleccione un servicio</option>';
+      
+      var duracionInfo = document.getElementById('duracionInfo');
+      if (duracionInfo) duracionInfo.style.display = 'none';
+      
+      if (!modalidadId || isNaN(modalidadId) || modalidadId <= 0) return;
+      
+      fetch('servicios_con_duracion.php?modalidad_id=' + modalidadId)
+        .then(r => r.json())
+        .then(data => {
+          data.forEach(function(servicio) {
+            var opt = document.createElement('option');
+            opt.value = servicio.id;
+            opt.textContent = servicio.nombre;
+            opt.setAttribute('data-duracion', servicio.duracion_minutos);
+            servicioSelect.appendChild(opt);
+          });
+          
+          // Agregar evento para manejar cambio de servicio
+          servicioSelect.onchange = function() {
+            manejarCambioServicio();
+          };
+        });
+    }
+
+    function manejarCambioServicio() {
+      var servicioSelect = document.getElementById('agendarServicio');
+      var selectedOption = servicioSelect.options[servicioSelect.selectedIndex];
+      var duracion = selectedOption.getAttribute('data-duracion');
+      var tiempoManual = document.getElementById('tiempoManual');
+      
+      if (duracion && !tiempoManual.checked) {
+        var horaInicioInput = document.getElementById('agendarHoraInicio');
+        if (horaInicioInput.value) {
+          var horaInicio = horaInicioInput.value;
+          var nuevaHoraFin = calcularHoraFin(horaInicio, parseInt(duracion));
+          document.getElementById('agendarHoraFin').value = nuevaHoraFin;
+        }
         
-        // Ocultar información de duración al cambiar modalidad
+        var duracionInfo = document.getElementById('duracionInfo');
+        var duracionTexto = document.getElementById('duracionTexto');
+        if (duracionInfo && duracionTexto) {
+          duracionTexto.textContent = `Duración estimada: ${duracion} minutos`;
+          duracionInfo.style.display = 'block';
+        }
+      } else if (!duracion) {
         var duracionInfo = document.getElementById('duracionInfo');
         if (duracionInfo) duracionInfo.style.display = 'none';
-        
-        if (!modalidadId || isNaN(modalidadId) || modalidadId <= 0) return;
-        
-        fetch('servicios_con_duracion.php?modalidad_id=' + modalidadId)
-          .then(r => r.json())
-          .then(data => {
-            data.forEach(function(servicio) {
-              var opt = document.createElement('option');
-              opt.value = servicio.id;
-              opt.textContent = servicio.nombre;
-              opt.setAttribute('data-duracion', servicio.duracion_minutos);
-              servicioSelect.appendChild(opt);
-            });
-            
-            // Agregar evento para manejar cambio de servicio
-            servicioSelect.onchange = function() {
-              manejarCambioServicio();
-            };
-          });
       }
+    }
 
-      // Nueva función para manejar el cambio de servicio y actualizar duración
-      function manejarCambioServicio() {
-        var servicioSelect = document.getElementById('agendarServicio');
-        var selectedOption = servicioSelect.options[servicioSelect.selectedIndex];
-        var duracion = selectedOption.getAttribute('data-duracion');
-        var tiempoManual = document.getElementById('tiempoManual');
-        
-        if (duracion && !tiempoManual.checked) {
-          // Calcular nueva hora fin basada en la duración
-          var horaInicioInput = document.getElementById('agendarHoraInicio');
-          if (horaInicioInput.value) {
-            var horaInicio = horaInicioInput.value;
-            var nuevaHoraFin = calcularHoraFin(horaInicio, parseInt(duracion));
-            document.getElementById('agendarHoraFin').value = nuevaHoraFin;
-          }
-          
-          // Mostrar información de duración
-          var duracionInfo = document.getElementById('duracionInfo');
-          var duracionTexto = document.getElementById('duracionTexto');
-          if (duracionInfo && duracionTexto) {
-            duracionTexto.textContent = `Duración estimada: ${duracion} minutos`;
-            duracionInfo.style.display = 'block';
-          }
-        } else if (!duracion) {
-          // Ocultar información de duración si no hay servicio seleccionado
-          var duracionInfo = document.getElementById('duracionInfo');
-          if (duracionInfo) duracionInfo.style.display = 'none';
-        }
-      }
+    function calcularHoraFin(horaInicio, duracionMinutos) {
+      if (!horaInicio) return '';
+      var [horas, minutos] = horaInicio.split(':').map(Number);
+      var totalMinutos = horas * 60 + minutos + duracionMinutos;
+      var nuevasHoras = Math.floor(totalMinutos / 60);
+      var nuevosMinutos = totalMinutos % 60;
+      return String(nuevasHoras).padStart(2, '0') + ':' + String(nuevosMinutos).padStart(2, '0');
+    }
 
-      // Función para calcular hora fin basada en hora inicio y duración
-      function calcularHoraFin(horaInicio, duracionMinutos) {
-        if (!horaInicio) return '';
-        
-        var [horas, minutos] = horaInicio.split(':').map(Number);
-        var totalMinutos = horas * 60 + minutos + duracionMinutos;
-        
-        var nuevasHoras = Math.floor(totalMinutos / 60);
-        var nuevosMinutos = totalMinutos % 60;
-        
-        return String(nuevasHoras).padStart(2, '0') + ':' + String(nuevosMinutos).padStart(2, '0');
-      }
-
+    document.addEventListener('DOMContentLoaded', function() {
       var modalidadSelect = document.getElementById('profesional-select');
       modalidadSelect.addEventListener('change', function() {
         var modalidadId = modalidadSelect.value;
@@ -2615,55 +2600,8 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         height: "100vh",
   selectable: true, // Allow selecting multiple contiguous slots for bookings
         // select: function(info) {
-        //   lastDateClickInfo = info;
-        //   contextMenu.style.display = 'block';
-        //   contextMenu.style.left = info.jsEvent.pageX + 'px';
-        //   contextMenu.style.top = info.jsEvent.pageY + 'px';
-        // },
         select: function(selectionInfo) {
-          lastDateClickInfo = selectionInfo;
-          
-          // Pre-fill booking modal with selection
-          var fecha = selectionInfo.start.toISOString().split('T')[0];
-          var horaInicio = selectionInfo.start.toTimeString().substring(0,5);
-          var horaFin = (selectionInfo.end) ? selectionInfo.end.toTimeString().substring(0,5) : '';
-          
-          document.getElementById('agendarFecha').value = fecha;
-          document.getElementById('agendarHoraInicio').value = horaInicio;
-          if (document.getElementById('agendarHoraFin')) {
-            document.getElementById('agendarHoraFin').value = horaFin;
-          }
-          
-          // Handle resource (modalidad) selection
-          var agendarModalidadSelect = document.getElementById('agendarModalidad');
-          var modalidadId = '';
-          
-          if (selectionInfo.resource) {
-            modalidadId = selectionInfo.resource.id || '';
-          }
-          
-          if (agendarModalidadSelect) {
-            agendarModalidadSelect.value = modalidadId;
-          }
-          
-          // Load services for the selected modality
-          cargarServiciosPorModalidad(modalidadId);
-          
-          // Reset patient search and other fields
-          document.getElementById('agendarPaciente').value = '';
-          document.getElementById('agendarPaciente').dataset.pacienteId = '';
-          if (document.getElementById('registroPacienteBox')) {
-            document.getElementById('registroPacienteBox').style.display = 'none';
-          }
-
-          // Open the booking modal
-          document.getElementById('modalAgendar').style.display = 'flex';
-
-          // Focus on patient input
-          setTimeout(function() {
-            var pacienteInput = document.getElementById('agendarPaciente');
-            if (pacienteInput) pacienteInput.focus();
-          }, 200);
+          abrirModalAgendar(selectionInfo);
         },
         dateClick: function(info) {
           // Mejorar detección de eventos con múltiples selectores
@@ -3097,7 +3035,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       };
 
       // FECHA Y HORA DEFAULT SEGUN CALENDARIO
-      agendarBtn.onclick = function() {
+      function abrirModalAgendar(info) { // Ahora acepta un parámetro 'info'
         contextMenu.style.display = 'none';
         var fecha = '';
         var horaInicio = '';
@@ -3105,22 +3043,29 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         var now = new Date();
 
         if (lastDateClickInfo && lastDateClickInfo.start && lastDateClickInfo.end) {
-          fecha = lastDateClickInfo.start.toISOString().split('T')[0];
-          horaInicio = lastDateClickInfo.start.toTimeString().substring(0,5);
-          horaFin = lastDateClickInfo.end.toTimeString().substring(0,5);
-        } else if (lastDateClickInfo && lastDateClickInfo.date) {
-          fecha = lastDateClickInfo.date.toISOString().split('T')[0];
-          horaInicio = lastDateClickInfo.date.toTimeString().substring(0,5);
-          var dateObj = new Date(lastDateClickInfo.date);
-          dateObj.setMinutes(dateObj.getMinutes() + 30);
-          horaFin = dateObj.toTimeString().substring(0,5);
+            fecha = lastDateClickInfo.start.toISOString().split('T')[0];
+            horaInicio = lastDateClickInfo.start.toTimeString().substring(0,5);
+            horaFin = lastDateClickInfo.end.toTimeString().substring(0,5);
+        } else if (info && info.start && info.end) { // Usar 'info' si viene del select de FullCalendar
+            fecha = info.start.toISOString().split('T')[0];
+            horaInicio = info.start.toTimeString().substring(0,5);
+            horaFin = info.end.toTimeString().substring(0,5);
+        } else if (info && info.date) { // Usar 'info' si viene de dateClick
+            fecha = info.date.toISOString().split('T')[0];
+            horaInicio = info.date.toTimeString().substring(0,5);
+            var dateObj = new Date(info.date);
+            dateObj.setMinutes(dateObj.getMinutes() + 30);
+            horaFin = dateObj.toTimeString().substring(0,5);
         } else {
-          fecha = now.toISOString().split('T')[0];
-          horaInicio = now.toTimeString().substring(0,5);
-          var dateObj = new Date(now);
-          dateObj.setMinutes(dateObj.getMinutes() + 30);
-          horaFin = dateObj.toTimeString().substring(0,5);
+            fecha = now.toISOString().split('T')[0];
+            horaInicio = now.toTimeString().substring(0,5);
+            var dateObj = new Date(now);
+            dateObj.setMinutes(dateObj.getMinutes() + 30);
+            horaFin = dateObj.toTimeString().substring(0,5);
         }
+
+        // Resetear campos del formulario
+        document.getElementById('formAgendar').reset();
 
         document.getElementById('agendarFecha').value = fecha;
         document.getElementById('agendarHoraInicio').value = horaInicio;
@@ -3128,26 +3073,42 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         document.getElementById('agendarPaciente').value = '';
         document.getElementById('agendarServicio').value = '';
         var agendarModalidadSelect = document.getElementById('agendarModalidad');
-        var modalidadId = '';
-        if (lastDateClickInfo && lastDateClickInfo.resource) {
-          modalidadId = lastDateClickInfo.resource.id || '';
-        }
-        if (agendarModalidadSelect) {
-          agendarModalidadSelect.value = modalidadId;
-        }
-        cargarServiciosPorModalidad(modalidadId);
-        document.getElementById('modalAgendar').style.display = 'flex';
         
-        // Resetear la sección de información adicional
-        document.getElementById('infoAdicionalBox').style.display = 'none';
-        document.getElementById('iconInfoAdicional').style.transform = 'rotate(0deg)';
-        document.getElementById('iconInfoAdicional').className = 'fas fa-chevron-down';
-        
-        setTimeout(function() {
-          var pacienteInput = document.getElementById('agendarPaciente');
-          if (pacienteInput) pacienteInput.focus();
-        }, 200);
-      };
+        // Cargar modalidades en el selector
+        fetchJsonDebug('citas/recursos_json.php')
+            .then(function(data) {
+                agendarModalidadSelect.innerHTML = '<option value="">Seleccione una modalidad</option>'; // Limpiar y añadir opción por defecto
+                data.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.title;
+                    agendarModalidadSelect.appendChild(opt);
+                });
+
+                var initialModalidadId = '';
+                if (info && info.resource) { // Si viene de una selección de FullCalendar
+                    initialModalidadId = info.resource.id || '';
+                } else if (lastDateClickInfo && lastDateClickInfo.resource) { // Si viene del menú contextual
+                    initialModalidadId = lastDateClickInfo.resource.id || '';
+                }
+
+                if (initialModalidadId) {
+                    agendarModalidadSelect.value = initialModalidadId;
+                    cargarServiciosPorModalidad(initialModalidadId);
+                } else {
+                    cargarServiciosPorModalidad(''); // Cargar sin modalidad seleccionada
+                }
+            })
+            .catch(function(err) {
+                console.error('Error cargando modalidades para agendar:', err);
+            });
+
+        agendarModalidadSelect.onchange = function() {
+            cargarServiciosPorModalidad(this.value);
+        };
+        document.getElementById('modalAgendar').style.display = 'flex'; // Mostrar el modal
+        setTimeout(() => pacienteInput.focus(), 200); // Poner foco
+      } // Fin de abrirModalAgendar
 
       document.getElementById('formAgendar').onsubmit = function(e) {
         e.preventDefault();
@@ -3196,11 +3157,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         });
       };
     });
-
-    // Funciones para botones del header
-  function abrirModalAgendar() {
-    var modal = document.getElementById('modalAgendar');
-    var pacienteInput = document.getElementById('agendarPaciente');
+    
+    // La función abrirModalAgendar global que será llamada por el botón "Nueva Cita"
+    // y por el evento 'select' de FullCalendar
+    function abrirModalAgendar(info) {
+    var modal = document.getElementById('modalAgendar'); // Asegúrate de que modal esté definido
     var registroBox = document.getElementById('registroPacienteBox');
     var fechaInput = document.getElementById('agendarFecha');
     var horaInicioInput = document.getElementById('agendarHoraInicio');
@@ -3215,27 +3176,30 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
 
     // Determine default date/time: prefer lastDateClickInfo (set by calendar), otherwise now rounded to 30m
     var fecha = '';
-    var horaInicio = '';
-    if (typeof lastDateClickInfo !== 'undefined' && lastDateClickInfo && lastDateClickInfo.date) {
-      var d = lastDateClickInfo.date instanceof Date ? lastDateClickInfo.date : new Date(lastDateClickInfo.date);
-      fecha = d.toISOString().split('T')[0];
-      var hh = String(d.getHours()).padStart(2, '0');
-      var mm = String(d.getMinutes()).padStart(2, '0');
-      horaInicio = hh + ':' + mm;
+    var horaInicio = ''; // Asegúrate de que pacienteInput esté definido
+    var horaFin = '';
+    var now = new Date();
+
+    if (info && info.start && info.end) {
+        fecha = info.start.toISOString().split('T')[0];
+        horaInicio = info.start.toTimeString().substring(0, 5);
+        horaFin = info.end.toTimeString().substring(0, 5);
+    } else if (info && info.date) {
+        fecha = info.date.toISOString().split('T')[0];
+        horaInicio = info.date.toTimeString().substring(0, 5);
+        var dateObj = new Date(info.date);
+        dateObj.setMinutes(dateObj.getMinutes() + 30);
+        horaFin = dateObj.toTimeString().substring(0, 5);
     } else {
-      var now = new Date();
-      var mins = now.getMinutes();
-      var add = mins % 30 === 0 ? 0 : (30 - (mins % 30));
-      now.setMinutes(now.getMinutes() + add);
-      fecha = now.toISOString().split('T')[0];
-      horaInicio = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        fecha = now.toISOString().split('T')[0];
+        horaInicio = now.toTimeString().substring(0, 5);
+        var dateObj = new Date(now);
+        dateObj.setMinutes(dateObj.getMinutes() + 30);
+        horaFin = dateObj.toTimeString().substring(0, 5);
     }
-
-    if (fechaInput) fechaInput.value = fecha;
-    if (horaInicioInput) horaInicioInput.value = horaInicio;
-
-    // Set default hora fin using calcularHoraFin if available, default 30 minutes
-    try {
+    
+    // Set default hora fin using calcularHoraFin if available, default 30 minutes (this part is now handled by the info parameter)
+    /* try {
       var durDefault = 30;
       var servicioSelect = document.getElementById('agendarServicio');
       var sel = servicioSelect && servicioSelect.options[servicioSelect.selectedIndex];
@@ -3244,49 +3208,55 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       if (horaFinInput) horaFinInput.value = calcularHoraFin(horaInicio, dur);
     } catch (e) {
       if (horaFinInput) horaFinInput.value = '';
-    }
+    } */
 
-    // Populate agendarModalidad select
+    if (fechaInput) fechaInput.value = fecha;
+    if (horaInicioInput) horaInicioInput.value = horaInicio;
+    if (horaFinInput) horaFinInput.value = horaFin;
+
+    // Populate agendarModalidad select and pre-select
     var agendarModalidadSelect = document.getElementById('agendarModalidad');
     if (agendarModalidadSelect) {
-      agendarModalidadSelect.innerHTML = '<option value="">Seleccione una modalidad</option>'; // Clear existing options
+        agendarModalidadSelect.innerHTML = '<option value="">Seleccione una modalidad</option>'; // Clear existing options
 
-      fetchJsonDebug('citas/recursos_json.php')
-        .then(function(data) {
-          data.forEach(item => {
-            const opt = document.createElement('option');
-            opt.value = item.id;
-            opt.textContent = item.title;
-            agendarModalidadSelect.appendChild(opt);
-          });
+        fetchJsonDebug('citas/recursos_json.php')
+            .then(function(data) {
+                data.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.title;
+                    agendarModalidadSelect.appendChild(opt);
+                });
 
-          var initialModalidadId = '';
-          if (typeof lastDateClickInfo !== 'undefined' && lastDateClickInfo && lastDateClickInfo.resource) {
-            initialModalidadId = lastDateClickInfo.resource.id || '';
-          } else {
-            var sidebarModalidadSelect = document.getElementById('profesional-select');
-            if (sidebarModalidadSelect && sidebarModalidadSelect.value !== 'todos') {
-              initialModalidadId = sidebarModalidadSelect.value;
-            }
-          }
+                var initialModalidadId = '';
+                if (info && info.resource) { // Si viene de una selección de FullCalendar
+                    initialModalidadId = info.resource.id || '';
+                } else if (typeof lastDateClickInfo !== 'undefined' && lastDateClickInfo && lastDateClickInfo.resource) { // Si viene del menú contextual
+                    initialModalidadId = lastDateClickInfo.resource.id || '';
+                } else { // Si se abre sin contexto (ej. botón "Nueva Cita" sin selección previa)
+                    var sidebarModalidadSelect = document.getElementById('profesional-select');
+                    if (sidebarModalidadSelect && sidebarModalidadSelect.value !== 'todos') {
+                        initialModalidadId = sidebarModalidadSelect.value;
+                    }
+                }
 
-          if (initialModalidadId) {
-            agendarModalidadSelect.value = initialModalidadId;
-            cargarServiciosPorModalidad(initialModalidadId);
-          } else {
-            var servicioSelect = document.getElementById('agendarServicio');
-            if (servicioSelect) {
-              servicioSelect.innerHTML = '<option value="">Seleccione un servicio</option>';
-            }
-          }
-        })
-        .catch(function(err) {
-          console.error('Error cargando modalidades para agendar:', err);
-        });
+                if (initialModalidadId) {
+                    agendarModalidadSelect.value = initialModalidadId;
+                    cargarServiciosPorModalidad(initialModalidadId);
+                } else {
+                    var servicioSelect = document.getElementById('agendarServicio');
+                    if (servicioSelect) {
+                        servicioSelect.innerHTML = '<option value="">Seleccione un servicio</option>';
+                    }
+                }
+            })
+            .catch(function(err) {
+                console.error('Error cargando modalidades para agendar:', err);
+            });
 
-      agendarModalidadSelect.onchange = function() {
-        cargarServiciosPorModalidad(this.value);
-      };
+        agendarModalidadSelect.onchange = function() {
+            cargarServiciosPorModalidad(this.value);
+        };
     }
     // Ensure the select is enabled and visible
     agendarModalidadSelect.disabled = false;
@@ -3298,7 +3268,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       modal.style.display = 'flex';
       setTimeout(function() {
         if (pacienteInput) pacienteInput.focus();
-      }, 200);
+      }, 200); // Asegúrate de que pacienteInput esté definido
     } else {
       alert('No se encontró el modal de agendar (modalAgendar) en la página.');
     }
