@@ -17,7 +17,25 @@ $nota_paciente = $_POST['nota_paciente'] ?? '';
 $response = [];
 
 try {
-    if ($fecha && $hora_inicio && $hora_fin && $paciente_id && $servicio_id && $modalidad_id) {
+    if ($fecha && $hora_inicio && $paciente_id && $modalidad_id) { // Requerir solo los campos esenciales
+
+        // --- LÓGICA DE HORA_FIN CORREGIDA ---
+        // Solo calcular la hora_fin si el campo viene explícitamente vacío.
+        // Si el usuario envía un valor (incluso para un bloqueo sin servicio), se respeta.
+        if (empty($hora_fin)) {
+            if (!empty($servicio_id)) {
+                $stmt_duracion = $conn->prepare("SELECT duracion_minutos FROM portal_servicios WHERE id = ?");
+                $stmt_duracion->bind_param("i", $servicio_id);
+                $stmt_duracion->execute();
+                $stmt_duracion->bind_result($duracion);
+                $stmt_duracion->fetch(); $stmt_duracion->close();
+                $minutos_a_sumar = ($duracion > 0) ? intval($duracion) : 30; // Default 30 si el servicio no tiene duración
+                $hora_fin = date('H:i:s', strtotime($hora_inicio) + $minutos_a_sumar * 60);
+            } else {
+                // Si no hay ni hora_fin ni servicio, se usa un default de 30 min.
+                $hora_fin = date('H:i:s', strtotime($hora_inicio) + 1800);
+            }
+        }
         
         // Escapar valores para consulta directa
         $fecha = $conn->real_escape_string($fecha);
@@ -28,7 +46,7 @@ try {
         $tipo = $conn->real_escape_string($tipo);
         
         $paciente_id = intval($paciente_id);
-        $servicio_id = intval($servicio_id);
+        $servicio_id = !empty($servicio_id) ? intval($servicio_id) : null;
         $modalidad_id = intval($modalidad_id);
         $estado_id = intval($estado_id);
 
@@ -60,8 +78,9 @@ try {
         } else {
             // Insertar nueva cita
             $profesional_id_sql = is_null($profesional_id) ? "NULL" : $profesional_id;
+            $servicio_id_sql = is_null($servicio_id) ? "NULL" : $servicio_id;
             $sqlInsert = "INSERT INTO agenda_citas (fecha, paciente_id, profesional_id, servicio_id, estado_id, nota_paciente, nota_interna, hora_inicio, hora_fin, modalidad_id, tipo) 
-                         VALUES ('$fecha', $paciente_id, $profesional_id_sql, $servicio_id, $estado_id, '$nota_paciente', '$nota_interna', '$hora_inicio', '$hora_fin', $modalidad_id, '$tipo')";
+                         VALUES ('$fecha', $paciente_id, $profesional_id_sql, $servicio_id_sql, $estado_id, '$nota_paciente', '$nota_interna', '$hora_inicio', '$hora_fin', $modalidad_id, '$tipo')";
             
             if ($conn->query($sqlInsert)) {
                 $id = $conn->insert_id;
@@ -72,7 +91,7 @@ try {
             }
         }
     } else {
-        $response = ["success" => false, "error" => "Faltan datos obligatorios: fecha, hora_inicio, hora_fin, paciente_id, servicio_id, modalidad_id"];
+        $response = ["success" => false, "error" => "Faltan datos obligatorios: fecha, hora_inicio, paciente_id, modalidad_id."];
     }
 } catch (Exception $e) {
     $response = ["success" => false, "error" => $e->getMessage()];

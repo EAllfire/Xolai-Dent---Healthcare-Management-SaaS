@@ -501,6 +501,32 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             backdrop-filter: blur(10px);
         }
         
+        /* Estilos para la Leyenda de Colores */
+        .leyenda-estados {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding-top: 10px;
+        }
+        
+        .leyenda-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .leyenda-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .leyenda-texto {
+            font-size: 13px;
+            color: #4b5563;
+        }
         .control-section {
             margin-bottom: 2rem;
             position: relative;
@@ -805,14 +831,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         /* Mejorar detección de clics en eventos */
         .fc-event {
             cursor: pointer !important;
-            pointer-events: auto !important;
-            z-index: 100 !important; /* Mayor que el indicador now */
-            position: relative !important;
+            pointer-events: auto !important; /* Mantener para que sea clickeable */
         }
         
         .fc-event-main {
             pointer-events: auto !important;
-            z-index: inherit !important;
         }
         
         .fc-event-title {
@@ -826,14 +849,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         /* Asegurar que los eventos sean clickeables en todas las vistas */
         .fc-timegrid-event {
             pointer-events: auto !important;
-            cursor: pointer !important;
-            z-index: 100 !important;
-            position: relative !important;
+            cursor: pointer !important; /* Mantener el cursor para indicar que es clickeable */
         }
         
         .fc-timegrid-event .fc-event-main {
             pointer-events: auto !important;
-            z-index: inherit !important;
         }
         
         /* Reducir z-index del indicador now para que no interfiera */
@@ -1341,6 +1361,36 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                         Próximo Mes
                     </h5>
                     <div id="mini-calendar-proximo" class="mini-calendar"></div>
+                </div>
+
+                <!-- Leyenda de Estados -->
+                <div class="control-section">
+                    <h5 class="control-title">
+                        <i class="fas fa-palette"></i>
+                        Leyenda de Estados
+                    </h5>
+                    <div class="leyenda-estados">
+                        <div class="leyenda-item">
+                            <span class="leyenda-color" style="background-color: #2196F3;"></span>
+                            <span class="leyenda-texto">Reservado</span>
+                        </div>
+                        <div class="leyenda-item">
+                            <span class="leyenda-color" style="background-color: #FF9800;"></span>
+                            <span class="leyenda-texto">Confirmado</span>
+                        </div>
+                        <div class="leyenda-item">
+                            <span class="leyenda-color" style="background-color: #4CAF50;"></span>
+                            <span class="leyenda-texto">En espera</span>
+                        </div>
+                        <div class="leyenda-item">
+                            <span class="leyenda-color" style="background-color: #E91E63;"></span>
+                            <span class="leyenda-texto">Asistió</span>
+                        </div>
+                        <div class="leyenda-item">
+                            <span class="leyenda-color" style="background-color: #FF7F50;"></span>
+                            <span class="leyenda-texto">No Asistió</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2325,11 +2375,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         eventDidMount: function(info) {
 
           
-          // Asegurar que el evento sea clickeable y esté por encima de otros elementos
-          info.el.style.cursor = 'pointer';
-          info.el.style.pointerEvents = 'auto';
-          info.el.style.zIndex = '100';
-          info.el.style.position = 'relative';
+          // Asegurar que el evento sea clickeable
           
           // PRIORIDAD: Event listener para clic (editar cita) - SIMPLIFICADO
           info.el.addEventListener('click', function(e) {
@@ -2579,6 +2625,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                 calendar.setOption('slotDuration', opcion);
                 calendar.setOption('slotLabelInterval', opcion);
                 // Force label format to always show minutes (HH:MM)
+                
+                adjustSlotHeights();
+
                 calendar.setOption('slotLabelFormat', { hour: '2-digit', minute: '2-digit' });
                 alert('Rango de tiempo actualizado a ' + rangoSeleccionado + ' minutos.');
                 // If a fallback button exists in resource area, remove it to avoid duplicates
@@ -2597,7 +2646,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
   slotLabelFormat: { hour: '2-digit', minute: '2-digit' },
         allDaySlot: false, // Quitar la fila de All Day
         nowIndicator: true, // Mostrar línea de tiempo actual
-        height: "100vh",
+        height: 'auto', // Cambiado de "100vh" a 'auto' para un mejor manejo de altura
   selectable: true, // Allow selecting multiple contiguous slots for bookings
         // select: function(info) {
         select: function(selectionInfo) {
