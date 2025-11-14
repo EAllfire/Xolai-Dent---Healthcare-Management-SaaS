@@ -105,6 +105,20 @@
         </div>
     </section>
 
+    <!-- My Appointments Section -->
+    <section id="mis-citas" class="services-section">
+        <div class="container">
+            <div class="section-title">
+                <h2>Mis Citas</h2>
+                <p>Aquí puedes ver y gestionar tus citas agendadas.</p>
+            </div>
+
+            <div class="row" id="citas-cliente-grid">
+                <!-- Las citas del cliente se cargarán dinámicamente aquí -->
+            </div>
+        </div>
+    </section>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -233,6 +247,48 @@
             });
         }
 
+        // Cargar citas del cliente
+        async function cargarCitasCliente() {
+            try {
+                // Simular un cliente_id. En un sistema real, esto vendría de la sesión.
+                const clienteId = 1; 
+                const response = await fetch(`citas_cliente_json.php?cliente_id=${clienteId}`);
+                const citas = await response.json();
+                
+                const grid = document.getElementById('citas-cliente-grid');
+                grid.innerHTML = ''; // Limpiar antes de cargar
+
+                if (citas.length === 0) {
+                    grid.innerHTML = '<div class="col-12 text-center"><p>No tienes citas agendadas.</p></div>';
+                    return;
+                }
+                
+                citas.forEach((cita, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'col-lg-6 col-md-12 mb-4';
+                    card.innerHTML = `
+                        <div class="card shadow-sm fade-in" style="animation-delay: ${index * 0.1}s;">
+                            <div class="card-body">
+                                <h5 class="card-title">${cita.servicio_nombre}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">${cita.modalidad_nombre}</h6>
+                                <p class="card-text">
+                                    <strong>Fecha:</strong> ${cita.fecha}<br>
+                                    <strong>Hora:</strong> ${cita.hora_inicio} - ${cita.hora_fin}<br>
+                                    <strong>Estado:</strong> ${cita.estado_nombre}
+                                </p>
+                                <a href="modificar_cita.php?id=${cita.id}" class="btn btn-sm btn-primary me-2">Modificar</a>
+                                <a href="eliminar_cita_cliente.php?id=${cita.id}" class="btn btn-sm btn-danger">Eliminar</a>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error cargando citas del cliente:', error);
+                document.getElementById('citas-cliente-grid').innerHTML = '<div class="col-12 text-center"><p class="text-danger">Error al cargar tus citas. Intenta de nuevo más tarde.</p></div>';
+            }
+        }
+
         // Función para ver modalidad
         function verModalidad(id, nombre) {
             // Redirigir a página de servicios de la modalidad
@@ -249,6 +305,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             cargarModalidades();
             cargarPaquetes();
+            cargarCitasCliente(); // Cargar citas del cliente al iniciar
 
             // Smooth scroll para navegación
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -304,5 +361,7 @@
             </div>
         </div>
     </footer>
+</body>
+</html>
 </body>
 </html>

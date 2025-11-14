@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Cita - Hospital Angeles Cuauhtémoc</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: none;
+            width: 100% !important;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #007bff; /* Azul de Bootstrap */
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+        }
+        .header img {
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 30px;
+            color: #333333;
+            line-height: 1.6;
+        }
+        .content h2 {
+            color: #007bff;
+            font-size: 22px;
+            margin-top: 0;
+        }
+        .content p {
+            margin-bottom: 15px;
+        }
+        .appointment-details {
+            background-color: #f9f9f9;
+            border-left: 4px solid #007bff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .appointment-details p {
+            margin: 5px 0;
+        }
+        .button-container {
+            text-align: center;
+            margin: 25px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #28a745; /* Verde de Bootstrap */
+            color: #ffffff;
+            padding: 12px 25px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 5px;
+        }
+        .button.cancel {
+            background-color: #dc3545; /* Rojo de Bootstrap */
+        }
+        .footer {
+            background-color: #f0f0f0;
+            color: #777777;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .footer .contact-info p {
+            margin: 5px 0;
+        }
+        .policy {
+            font-size: 13px;
+            color: #555555;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .policy ul {
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+        .policy li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles Cuauhtémoc">
+            <h1>{modalidad} en Hospital Angeles Cuauhtémoc</h1>
+            <p>{fecha}</p>
+        </div>
+
+        <div class="content">
+            <h2>¡Todo listo! Recibimos tu cita!</h2>
+            <p>Hola {nombre_paciente},</p>
+            <p>Tu cita ha sido agendada exitosamente con los siguientes detalles:</p>
+
+            <div class="appointment-details">
+                <p><strong>Modalidad:</strong> {modalidad}</p>
+                <p><strong>Servicio:</strong> {servicio}</p>
+                <p><strong>Fecha:</strong> {fecha}</p>
+                <p><strong>Hora:</strong> {hora_inicio} - {hora_fin}</p>
+                <p><strong>Dirección:</strong> {direccion_hospital}</p>
+                <p><a href="{google_maps_link}" target="_blank">Ver en Google Maps</a></p>
+            </div>
+
+            <div class="button-container">
+                <a href="{link_modificar_cita}" class="button">Modificar Cita</a>
+                <a href="{link_cancelar_cita}" class="button cancel">Cancelar Cita</a>
+            </div>
+
+            <p><strong>Notas para el paciente:</strong> {notas_paciente}</p>
+            <p><strong>Descripción del Servicio:</strong> {descripcion_servicio}</p>
+
+            <div class="policy">
+                <h3>Políticas de Modificación y Cancelación de la Reserva</h3>
+                <ul>
+                    <li>Se podrá cancelar hasta 24 horas antes de la cita.</li>
+                    <li>Podrás modificar la reserva un máximo de 3 veces.</li>
+                </ul>
+            </div>
+
+            <p>¿Sabías que puedes agendar tu próxima cita en línea?</p>
+            <p>Ahorra tiempo y entra a:</p>
+            <p><a href="{link_tienda_online}" target="_blank">Hospital Angeles Cuauhtémoc</a></p>
+        </div>
+
+        <div class="footer">
+            <div class="contact-info">
+                <p><strong>Contacto:</strong></p>
+                <p><a href="tel:+526251281200">+52 625 128 1200</a> (Llamar al Hospital)</p>
+                <p><a href="https://wa.me/526251281200" target="_blank">Contactanos por WhatsApp</a></p>
+            </div>
+            <p>&copy; 2025 Hospital Angeles Cuauhtémoc. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -145,6 +145,9 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                 <button class="btn btn-primary" onclick="abrirModalNuevoServicio()">
                     <i class="fas fa-plus"></i> Nuevo Servicio
                 </button>
+                <button class="btn btn-info ml-2" id="bulkEditBtn" onclick="abrirModalBulkEdit()" disabled>
+                    <i class="fas fa-edit"></i> Modificar Seleccionados
+                </button>
             </div>
             <div class="input-group" style="max-width: 400px;">
                 <div class="input-group-prepend">
@@ -163,6 +166,7 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <th><input type="checkbox" id="selectAllCheckbox" title="Seleccionar todo"></th>
                             <th>ID</th>
                             <th>Nombre del Servicio</th>
                             <th>Descripción</th>
@@ -183,6 +187,33 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
         </div>
     </div>
 
+    <!-- Modal Edición Masiva -->
+    <div class="modal fade" id="modalBulkEdit" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Modificar Descripción de Servicios Seleccionados</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p>Se modificarán <strong id="selected-count">0</strong> servicios.</p>
+                    <div class="form-group">
+                        <label for="bulk_descripcion">Nueva Descripción</label>
+                        <textarea class="form-control" id="bulk_descripcion" name="bulk_descripcion" rows="5" placeholder="Escribe la nueva descripción que se aplicará a todos los servicios seleccionados."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Nota:</strong> Esta acción reemplazará la descripción actual de todos los servicios seleccionados.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarBulkEdit()">
+                        <i class="fas fa-save"></i> Aplicar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Modal Nuevo/Editar Servicio -->
     <div class="modal fade" id="modalServicio" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -255,6 +286,23 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                 renderizarServicios(serviciosFiltrados);
                 actualizarContador(serviciosFiltrados.length, servicios.length);
             });
+
+            $('#selectAllCheckbox').on('change', function() {
+                const isChecked = $(this).is(':checked');
+                $('.service-checkbox').prop('checked', isChecked).trigger('change');
+            });
+
+            // Usamos delegación de eventos para los checkboxes que se crean dinámicamente
+            $('#services-tbody').on('change', '.service-checkbox', function() {
+                const totalChecked = $('.service-checkbox:checked').length;
+                $('#bulkEditBtn').prop('disabled', totalChecked === 0);
+
+                // Sincronizar el checkbox "seleccionar todo"
+                const totalCheckboxes = $('.service-checkbox').length;
+                if (totalCheckboxes > 0) {
+                    $('#selectAllCheckbox').prop('checked', totalChecked === totalCheckboxes);
+                }
+            });
         });
 
         function cargarModalidades() {
@@ -311,6 +359,9 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             lista.forEach(servicio => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
+                    <td>
+                        <input type="checkbox" class="service-checkbox" value="${servicio.id}">
+                    </td>
                     <td>${servicio.id}</td>
                     <td><strong>${servicio.nombre}</strong></td>
                     <td>${servicio.descripcion || '-'}</td>
@@ -411,6 +462,54 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                 .catch(error => {
                     console.error('Error:', error);
                     alert('Error al eliminar el servicio.');
+                });
+            }
+        }
+
+        function abrirModalBulkEdit() {
+            const selectedCount = $('.service-checkbox:checked').length;
+            if (selectedCount === 0) {
+                alert('Por favor, seleccione al menos un servicio para modificar.');
+                return;
+            }
+            $('#selected-count').text(selectedCount);
+            $('#bulk_descripcion').val('');
+            $('#modalBulkEdit').modal('show');
+        }
+
+        function guardarBulkEdit() {
+            const nuevaDescripcion = $('#bulk_descripcion').val();
+            const ids = $('.service-checkbox:checked').map(function() {
+                return $(this).val();
+            }).get();
+
+            if (ids.length === 0) {
+                alert('No hay servicios seleccionados.');
+                return;
+            }
+
+            if (confirm(`¿Está seguro de que desea actualizar la descripción de ${ids.length} servicios?`)) {
+                fetch('actualizar_servicios_bulk.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        ids: ids,
+                        descripcion: nuevaDescripcion
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#modalBulkEdit').modal('hide');
+                        cargarServicios(); // Recargar la lista para ver los cambios
+                        alert(`Se actualizaron ${data.affected_rows} servicios correctamente.`);
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error al procesar la solicitud.');
                 });
             }
         }

@@ -1,0 +1,1 @@
+ALTER TABLE agenda_citas ADD COLUMN token VARCHAR(255) UNIQUE;

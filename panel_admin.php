@@ -204,6 +204,12 @@ $show_admin_tools = $puede_gestionar_usuarios;
       <small style="color:#6b7280;margin-top:8px">Gestionar la base de datos de pacientes</small>
     </a>
 
+    <a href="catalogo_citas.php" class="admin-card" title="Catálogo de Citas">
+      <i class="fa-solid fa-calendar-check"></i>
+      <span>Citas</span>
+      <small style="color:#6b7280;margin-top:8px">Ver y buscar todas las citas agendadas</small>
+    </a>
+
     <a href="admin_modalidades.php" class="admin-card" title="Modalidades">
       <i class="fa-solid fa-layer-group"></i>
       <span>Modalidades</span>
@@ -226,5 +232,3 @@ $show_admin_tools = $puede_gestionar_usuarios;
 
 </body>
 </html>
-
-

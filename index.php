@@ -287,7 +287,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         /* Main Content */
         .main-content {
             margin-top: 80px;
-            display: flex;
+            display: flex; /* Asegura que los elementos internos se distribuyan en fila */
             height: calc(100vh - 80px);
         }
 
@@ -495,12 +495,22 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         .unified-controls {
             background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
             border-radius: 16px;
-            padding: 1.5rem;
+            padding: 1.5rem 0.75rem; /* Vertical 1.5rem, Horizontal 0.75rem */
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             border: 1px solid rgba(18, 117, 160, 0.1);
             backdrop-filter: blur(10px);
         }
         
+        /* Estilos para el Resizer */
+        .sidebar-resizer {
+            width: 8px;
+            cursor: ew-resize;
+            background-color: #e0e0e0; /* Color sutil para la línea */
+            flex-shrink: 0; /* Evita que se encoja */
+            transition: background-color 0.2s ease;
+        }
+        .sidebar-resizer:hover { background-color: #c0c0c0; }
+
         /* Estilos para la Leyenda de Colores */
         .leyenda-estados {
             display: grid;
@@ -516,15 +526,15 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
         
         .leyenda-color {
-            width: 14px;
-            height: 14px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             flex-shrink: 0;
             border: 1px solid rgba(0,0,0,0.1);
         }
         
         .leyenda-texto {
-            font-size: 13px;
+            font-size: 14px;
             color: #4b5563;
         }
         .control-section {
@@ -548,7 +558,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         
         .control-section:last-child::after {
             display: none;
-        }
+        } 
         
         .control-title {
             color: #1275a0;
@@ -615,13 +625,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             box-shadow: none;
             margin: 0;
             width: 100%;
-            max-width: 270px; /* Ajustar al ancho de la sidebar menos padding */
         }
         
         .mini-calendar .flatpickr-calendar {
             position: static !important;
             width: 100% !important;
-            max-width: 270px !important;
             box-shadow: none !important;
             border: none !important;
             background: transparent !important;
@@ -710,14 +718,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
 
         .mini-calendar .flatpickr-calendar .flatpickr-days {
             width: 100% !important;
-            max-width: 270px !important;
         }
 
         .mini-calendar .flatpickr-calendar .flatpickr-day {
-            width: 35px !important;
-            max-width: 35px !important;
-            height: 35px !important;
-            line-height: 35px !important;
+            width: 14.28% !important; /* Distribuir equitativamente en 7 columnas */
+            height: 35px !important; /* Mantener altura fija */
+            line-height: 35px !important; /* Centrar verticalmente */
             margin: 1px !important;
             color: #374151;
             border-radius: 6px;
@@ -1392,8 +1398,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> <!-- Cierre de .unified-controls -->
         </div>
+        <!-- Resizer para la barra lateral -->
+        <div class="sidebar-resizer" id="sidebar-resizer"></div>
 
         <!-- Calendar Area -->
         <div class="calendar-area">
@@ -1441,7 +1449,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
               </div>
               <div>
                 <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6b7280;">
-                  <input type="checkbox" id="tiempoManual" style="margin:0;">
+                  <input type="checkbox" id="tiempoManual" name="tiempoManual" style="margin:0;">
                   Editar manual
                 </label>
               </div>
@@ -1520,12 +1528,6 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
               <div style="margin-bottom:16px;">
                 <label style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Correo electrónico:</label>
                 <input type="email" id="nuevoPacienteCorreo" placeholder="correo@ejemplo.com" 
-                       style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
-              </div>
-
-              <div style="margin-bottom:16px;">
-                <label style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Diagnóstico o motivo del estudio:</label>
-                <textarea id="nuevoPacienteDiagnostico" placeholder="Describe el motivo del estudio o diagnóstico..." 
                        style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
               </div>
 
@@ -2110,6 +2112,62 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+      var calendar; // Declarar la variable aquí para que sea accesible en todo el script
+
+      // --- Lógica para el Resizer de la barra lateral ---
+      const sidebar = document.querySelector('.sidebar');
+      const resizer = document.getElementById('sidebar-resizer');
+      
+      let isResizing = false;
+      let initialX;
+      let initialWidth;
+
+      if (resizer) {
+        resizer.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            initialX = e.clientX;
+            initialWidth = sidebar.offsetWidth;
+
+            // Añadir listeners al documento para capturar eventos globalmente
+            document.addEventListener('mousemove', resizeSidebar);
+            document.addEventListener('mouseup', stopResizing);
+
+            // Prevenir selección de texto durante el arrastre
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'ew-resize';
+        });
+      }
+
+      function resizeSidebar(e) {
+          if (!isResizing) return;
+
+          const newWidth = initialWidth + (e.clientX - initialX);
+          const minWidth = 250; // Ancho mínimo de la barra lateral
+          const maxWidth = 600; // Ancho máximo de la barra lateral
+
+          if (newWidth >= minWidth && newWidth <= maxWidth) {
+              sidebar.style.width = `${newWidth}px`;
+              // FullCalendar necesita ser notificado para actualizar su tamaño
+              if (calendar) {
+                  calendar.updateSize();
+              }
+          }
+      }
+
+      function stopResizing() {
+          isResizing = false;
+          document.removeEventListener('mousemove', resizeSidebar);
+          document.removeEventListener('mouseup', stopResizing);
+          document.body.style.userSelect = '';
+          document.body.style.cursor = '';
+      }
+      // --- Fin Lógica para el Resizer ---
+
+      // ... (resto del código DOMContentLoaded) ...
+
+
+      // ... (resto del código DOMContentLoaded) ...
+
       var modalidadSelect = document.getElementById('profesional-select');
       modalidadSelect.addEventListener('change', function() {
         var modalidadId = modalidadSelect.value;
@@ -3172,37 +3230,53 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         var notaInterna = document.getElementById('notaInterna').value;
         var notaPaciente = document.getElementById('notaPaciente').value;
 
+        // --- MEJORA: Validación de Paciente ---
+        // Asegurarse de que se ha seleccionado un paciente antes de continuar.
         if (!pacienteId) {
-          alert('Selecciona o registra un paciente antes de agendar la cita.');
+          alert('Error: No se ha seleccionado un paciente. Por favor, busque y seleccione un paciente antes de guardar.');
           return;
         }
 
-        var formData = new FormData();
-        formData.append('fecha', fecha);
-        formData.append('hora_inicio', horaInicio);
-        formData.append('hora_fin', horaFin);
-        formData.append('paciente_id', pacienteId);
-        formData.append('profesional_id', profesionalId);
-        formData.append('servicio_id', servicioId);
-        formData.append('modalidad_id', modalidadId);
-        formData.append('estado_id', estadoId);
-        formData.append('tipo', '');
-        formData.append('nota_interna', notaInterna);
-        formData.append('nota_paciente', notaPaciente);
+        // --- CORRECCIÓN CRÍTICA: Enviar datos como JSON ---
+        // Construir un objeto JavaScript con los datos del formulario.
+        const citaData = {
+            fecha: fecha,
+            hora_inicio: horaInicio,
+            hora_fin: horaFin,
+            paciente_id: pacienteId,
+            profesional_id: profesionalId,
+            servicio_id: servicioId,
+            modalidad_id: modalidadId,
+            estado_id: estadoId,
+            tipo: 'normal', // O el valor que corresponda
+            nota_interna: notaInterna,
+            nota_paciente: notaPaciente
+        };
+
+        // Enviar los datos como una cadena JSON.
         fetch('guardar_cita.php', {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(citaData)
         })
         .then(r => r.json())
         .then(resp => {
           if (resp.success) {
             alert('Cita agendada correctamente.');
             document.getElementById('modalAgendar').style.display = 'none';
-            calendar.refetchEvents();
-            setTimeout(actualizarMarcadoresMiniCalendarios, 500);
+            if (typeof calendar !== 'undefined' && calendar.refetchEvents) {
+              calendar.refetchEvents();
+            }
           } else {
-            alert('Error al guardar cita: ' + (resp.error || ''));
+            alert('Error al guardar cita: ' + (resp.error_details || resp.error || 'Error desconocido.'));
           }
+        })
+        .catch(err => {
+            console.error('Error en fetch:', err);
+            alert('Error de conexión al intentar guardar la cita.');
         });
       };
     });
@@ -3447,16 +3521,13 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     document.getElementById('eliminarCitaBtn').onclick = function() {
       if (confirm('¿Está seguro de que desea eliminar esta cita?')) {
         var citaId = document.getElementById('editarCitaId').value;
-        
-        var formData = new FormData();
-        formData.append('cita_id', citaId);
-        
-        fetch('eliminar_cita.php', {
-          method: 'POST',
-          body: formData
+
+        // Cambiamos a método GET para máxima compatibilidad con servidores
+        fetch(`eliminar_cita.php?cita_id=${citaId}`, {
+          method: 'GET'
         })
         .then(r => r.json())
-        .then(resp => {
+        .then(resp => {          
           if (resp.success) {
             alert('Cita eliminada correctamente.');
             document.getElementById('modalEditarCita').style.display = 'none';

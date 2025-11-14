@@ -23,15 +23,18 @@ $conn->set_charset("utf8");
 if ($conn->connect_error) {
   // Log del error para debugging
   error_log("Error de conexión BD: " . $conn->connect_error);
-
-  // Siempre devolver JSON para evitar que endpoints que esperan JSON reciban HTML/texto
-  header('Content-Type: application/json');
-  echo json_encode([
-    "success" => false,
-    "error" => "Error de conexión a la base de datos",
-    "details" => $conn->connect_error
-  ]);
-  exit;
+  
+  if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
+    header('Content-Type: application/json');
+    echo json_encode([
+      "success" => false, 
+      "error" => "Error de conexión a la base de datos",
+      "details" => $conn->connect_error
+    ]);
+    exit;
+  } else {
+    die("Error de conexión a la base de datos: " . $conn->connect_error);
+  }
 }
 
 // Configurar zona horaria para MySQL

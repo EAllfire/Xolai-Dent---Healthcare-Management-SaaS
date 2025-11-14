@@ -373,22 +373,18 @@
                     
                     <div class="card-body">
                         <!-- Service/Package Summary -->
-                        <div id="serviceSummary" class="service-summary">
-                            <!-- Se llenará dinámicamente -->
-                        </div>
+                        <div id="serviceSummary" class="service-summary"></div>
 
                         <!-- Alert Messages -->
                         <div id="alertContainer"></div>
 
                         <!-- Reservation Form -->
-                        <form id="reservationForm">
+                        <form id="reservationForm" enctype="multipart/form-data">
                             <!-- Información Personal -->
                             <div class="form-section">
                                 <div class="section-title">
-                                    <i class="fas fa-user"></i>
-                                    Información Personal
+                                    <i class="fas fa-user"></i> Información Personal
                                 </div>
-                                
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="nombre" class="form-label">Nombre Completo *</label>
@@ -399,7 +395,6 @@
                                         <input type="tel" class="form-control" id="telefono" name="telefono" required>
                                     </div>
                                 </div>
-                                
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="email" class="form-label">Email *</label>
@@ -415,10 +410,8 @@
                             <!-- Selección de Fecha y Hora -->
                             <div class="form-section">
                                 <div class="section-title">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    Fecha y Hora
+                                    <i class="fas fa-calendar-alt"></i> Fecha y Hora
                                 </div>
-                                
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="fecha_cita" class="form-label">Fecha Deseada *</label>
@@ -426,41 +419,36 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Horarios Disponibles *</label>
-                                        <div id="timeSlots" class="time-slots">
-                                            <!-- Se llenarán dinámicamente -->
-                                        </div>
+                                        <div id="timeSlots" class="time-slots"></div>
                                         <input type="hidden" id="hora_seleccionada" name="hora_seleccionada" required>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Modalidad (solo para servicios individuales) -->
-                            <div class="form-section" id="modalidadSection" style="display: none;">
+                            <!-- Carga de Documentos -->
+                            <div class="form-section">
                                 <div class="section-title">
-                                    <i class="fas fa-cog"></i>
-                                    Modalidad
+                                    <i class="fas fa-file-upload"></i> Carga de Documentos (Opcional)
                                 </div>
-                                
                                 <div class="mb-3">
-                                    <label for="modalidad_id" class="form-label">Seleccionar Modalidad *</label>
-                                    <select class="form-select" id="modalidad_id" name="modalidad_id">
-                                        <option value="">Seleccionar modalidad...</option>
-                                    </select>
+                                    <label for="foto_identificacion" class="form-label">Foto de Identificación (INE/Pasaporte)</label>
+                                    <input type="file" class="form-control" id="foto_identificacion" name="foto_identificacion" accept="image/*">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="foto_orden" class="form-label">Foto de Orden Médica</label>
+                                    <input type="file" class="form-control" id="foto_orden" name="foto_orden" accept="image/*">
                                 </div>
                             </div>
 
                             <!-- Información Adicional -->
                             <div class="form-section">
                                 <div class="section-title">
-                                    <i class="fas fa-notes-medical"></i>
-                                    Información Adicional
+                                    <i class="fas fa-notes-medical"></i> Información Adicional
                                 </div>
-                                
                                 <div class="mb-3">
                                     <label for="observaciones" class="form-label">Comentarios o Observaciones</label>
-                                    <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Cualquier información adicional que considere relevante..."></textarea>
+                                    <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
                                 </div>
-                                
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="acepta_terminos" name="acepta_terminos" required>
                                     <label class="form-check-label" for="acepta_terminos">
@@ -469,14 +457,11 @@
                                 </div>
                             </div>
 
-                            <!-- Botones de Acción -->
+                            <!-- Botones -->
                             <div class="d-flex gap-3 justify-content-end">
-                                <button type="button" class="btn btn-secondary" onclick="history.back()">
-                                    Cancelar
-                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="history.back()">Cancelar</button>
                                 <button type="submit" class="btn btn-primary" id="submitBtn">
-                                    <i class="fas fa-check me-2"></i>
-                                    Confirmar Reserva
+                                    <i class="fas fa-check me-2"></i> Confirmar Reserva
                                 </button>
                             </div>
                         </form>
@@ -490,372 +475,161 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
-    
+
     <script>
-        let reservationData = {};
-        let availableSlots = [];
-        let flatpickrInstance;
+    let reservationData = {};
+    let flatpickrInstance;
 
-        // Inicializar página
-        document.addEventListener('DOMContentLoaded', function() {
-            loadReservationData();
-            initializeDatePicker();
-            loadModalidades();
-            
-            // Event listeners
-            document.getElementById('reservationForm').addEventListener('submit', handleSubmit);
+    // 🔹 Obtener parámetros de la URL
+    function getParams() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            tipo: params.get('tipo') || '',
+            servicio_id: params.get('servicio_id') || '',
+            servicio_nombre: params.get('servicio_nombre') || '',
+            modalidad_id: params.get('modalidad_id') || '',
+            modalidad_nombre: params.get('modalidad_nombre') || ''
+        };
+    }
+
+    // 🔹 Inicializar todo
+    document.addEventListener('DOMContentLoaded', function() {
+        reservationData = getParams();
+        loadReservationData();
+        initializeDatePicker();
+        document.getElementById('reservationForm').addEventListener('submit', handleSubmit);
+    });
+
+    // 🔹 Mostrar resumen del servicio
+    function loadReservationData() {
+        if (reservationData.tipo === 'servicio' && reservationData.servicio_nombre) {
+            document.getElementById('serviceSummary').innerHTML = `
+                <div class="service-title">
+                    <i class="fas fa-medical me-2"></i>${reservationData.servicio_nombre}
+                </div>
+                <div class="service-details">
+                    <strong>Modalidad:</strong> ${reservationData.modalidad_nombre}
+                </div>`;
+        }
+    }
+
+    // 🔹 Datepicker
+    function initializeDatePicker() {
+        flatpickrInstance = flatpickr("#fecha_cita", {
+            locale: "es",
+            minDate: "today",
+            maxDate: new Date().fp_incr(60),
+            dateFormat: "Y-m-d",
+            disable: [date => date.getDay() === 0],
+            onChange: (selectedDates, dateStr) => { if (dateStr) loadAvailableSlots(dateStr); }
         });
+    }
 
-        // Cargar datos de reserva desde URL
-        function loadReservationData() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tipo = urlParams.get('tipo');
-            
-            if (tipo === 'servicio' || urlParams.get('servicio_id')) {
-                // Servicio individual desde modalidad.php
-                reservationData = {
-                    tipo: 'servicio',
-                    servicio_id: urlParams.get('servicio_id'),
-                    servicio_nombre: urlParams.get('servicio_nombre'),
-                    modalidad_id: urlParams.get('modalidad_id'),
-                    modalidad_nombre: urlParams.get('modalidad_nombre'),
-                    duracion: parseInt(urlParams.get('duracion') || '60')
-                };
-                
-                displayServiceSummary();
-                document.getElementById('modalidadSection').style.display = 'block';
-                
-                // Pre-seleccionar la modalidad
-                setTimeout(() => {
-                    const modalidadSelect = document.getElementById('modalidad_id');
-                    if (modalidadSelect && reservationData.modalidad_id) {
-                        modalidadSelect.value = reservationData.modalidad_id;
-                    }
-                }, 1000);
-                
-            } else if (tipo === 'paquete') {
-                // Paquete desde paquetes.php
-                reservationData = {
-                    tipo: 'paquete',
-                    paquete_tipo: urlParams.get('paquete_tipo'),
-                    paquete_nombre: urlParams.get('paquete_nombre'),
-                    paquete_precio: parseFloat(urlParams.get('paquete_precio')),
-                    paquete_servicios: JSON.parse(urlParams.get('paquete_servicios') || '[]')
-                };
-                
-                displayPackageSummary();
+    // 🔹 Generar y mostrar horarios
+    async function loadAvailableSlots(fecha) {
+        const cont = document.getElementById('timeSlots');
+        cont.innerHTML = '<p class="text-muted">Cargando horarios disponibles...</p>';
+
+        // Obtener los horarios ya reservados desde el backend
+        let horariosOcupados = [];
+        try {
+            const response = await fetch(`horarios_disponibles.php?fecha=${fecha}&modalidad_id=${reservationData.modalidad_id}`);
+            if (!response.ok) {
+                throw new Error('No se pudo conectar con el servidor de horarios.');
             }
+            horariosOcupados = await response.json();
+        } catch (error) {
+            console.error("Error al cargar horarios:", error);
+            cont.innerHTML = '<p class="text-danger">No se pudieron cargar los horarios. Intente de nuevo.</p>';
+            return;
         }
 
-        // Mostrar resumen de servicio
-        function displayServiceSummary() {
-            const summary = document.getElementById('serviceSummary');
-            summary.innerHTML = `
-                <div class="service-title">
-                    <i class="fas fa-medical me-2"></i>
-                    ${reservationData.servicio_nombre}
-                </div>
-                <div class="service-details">
-                    <strong>Modalidad:</strong> ${reservationData.modalidad_nombre}<br>
-                    <strong>Duración estimada:</strong> ${reservationData.duracion} minutos
-                </div>
-            `;
-        }
+        cont.innerHTML = ''; // Limpiar el contenedor antes de agregar los nuevos horarios
+        for (let h = 8; h < 18; h++) {
+            const time = `${h.toString().padStart(2, '0')}:00`;
+            const isUnavailable = horariosOcupados.includes(time);
 
-        // Mostrar resumen de paquete
-        function displayPackageSummary() {
-            const servicesList = reservationData.paquete_servicios.map(servicio => 
-                `<li><i class="fas fa-check"></i>${servicio}</li>`
-            ).join('');
-            
-            const summary = document.getElementById('serviceSummary');
-            summary.innerHTML = `
-                <div class="service-title">
-                    <i class="fas fa-gift me-2"></i>
-                    ${reservationData.paquete_nombre}
-                </div>
-                <div class="service-price">
-                    $${reservationData.paquete_precio.toLocaleString()}
-                </div>
-                <div class="service-details">
-                    <strong>Incluye:</strong>
-                    <ul class="service-list">
-                        ${servicesList}
-                    </ul>
-                </div>
-            `;
-        }
-
-        // Inicializar selector de fecha
-        function initializeDatePicker() {
-            flatpickrInstance = flatpickr("#fecha_cita", {
-                locale: "es",
-                minDate: "today",
-                maxDate: new Date().fp_incr(60), // 60 días adelante
-                dateFormat: "Y-m-d",
-                disable: [
-                    function(date) {
-                        // Deshabilitar domingos (0)
-                        return (date.getDay() === 0);
-                    }
-                ],
-                onChange: function(selectedDates, dateStr) {
-                    if (dateStr) {
-                        loadAvailableSlots(dateStr);
-                    }
-                }
-            });
-        }
-
-        // Cargar modalidades disponibles
-        async function loadModalidades() {
-            if (reservationData.tipo !== 'servicio') return;
-            
-            try {
-                const response = await fetch('recursos_json.php');
-                const modalidades = await response.json();
-                
-                const select = document.getElementById('modalidad_id');
-                select.innerHTML = '<option value="">Seleccionar modalidad...</option>';
-                
-                modalidades.forEach(modalidad => {
-                    const selected = modalidad.id == reservationData.modalidad_id ? 'selected' : '';
-                    select.innerHTML += `<option value="${modalidad.id}" ${selected}>${modalidad.title}</option>`;
-                });
-                
-            } catch (error) {
-                console.error('Error cargando modalidades:', error);
+            const div = document.createElement('div');
+            div.className = `time-slot ${isUnavailable ? 'unavailable' : ''}`;
+            div.textContent = time;
+            if (!isUnavailable) {
+                div.onclick = () => selectTimeSlot(time, div);
             }
+            cont.appendChild(div);
         }
+    }
 
-        // Cargar horarios disponibles
-        async function loadAvailableSlots(fecha) {
-            const slotsContainer = document.getElementById('timeSlots');
-            slotsContainer.innerHTML = '<div class="col-12 text-center">Cargando horarios...</div>';
-            
-            try {
-                // Generar horarios de ejemplo (en un caso real, esto vendría del servidor)
-                const horarios = generateTimeSlots(fecha);
-                displayTimeSlots(horarios);
-                
-            } catch (error) {
-                console.error('Error cargando horarios:', error);
-                slotsContainer.innerHTML = '<div class="col-12 text-center text-danger">Error cargando horarios</div>';
-            }
-        }
+    function selectTimeSlot(time, el) {
+        document.querySelectorAll('.time-slot.selected').forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
+        document.getElementById('hora_seleccionada').value = time;
+    }
 
-        // Generar horarios disponibles (simulado)
-        function generateTimeSlots(fecha) {
-            const slots = [];
-            const startHour = 8; // 8 AM
-            const endHour = 18; // 6 PM
-            const interval = 60; // 60 minutos
-            
-            for (let hour = startHour; hour < endHour; hour++) {
-                const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                const available = Math.random() > 0.3; // 70% disponibilidad simulada
-                
-                slots.push({
-                    time: timeStr,
-                    available: available
-                });
-            }
-            
-            return slots;
-        }
+    // 🔹 Enviar formulario
+    async function handleSubmit(e) {
+        e.preventDefault();
+        if (!validateForm()) return;
 
-        // Mostrar horarios disponibles
-        function displayTimeSlots(slots) {
-            const container = document.getElementById('timeSlots');
-            container.innerHTML = '';
-            
-            slots.forEach(slot => {
-                const slotElement = document.createElement('div');
-                slotElement.className = `time-slot ${slot.available ? '' : 'unavailable'}`;
-                slotElement.textContent = slot.time;
-                
-                if (slot.available) {
-                    slotElement.addEventListener('click', () => selectTimeSlot(slot.time, slotElement));
-                }
-                
-                container.appendChild(slotElement);
-            });
-        }
+        const btn = document.getElementById('submitBtn');
+        const original = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner"></span> Procesando...';
+        btn.disabled = true;
 
-        // Seleccionar horario
-        function selectTimeSlot(time, element) {
-            // Remover selección previa
-            document.querySelectorAll('.time-slot.selected').forEach(slot => {
-                slot.classList.remove('selected');
-            });
-            
-            // Seleccionar nuevo horario
-            element.classList.add('selected');
-            document.getElementById('hora_seleccionada').value = time;
-        }
+        try {
+            const formData = new FormData(e.target);
+            console.log(' reservationData:', reservationData);
 
-        // Manejar envío del formulario
-        async function handleSubmit(event) {
-            event.preventDefault();
-            
-            // Validar formulario antes de procesar
-            if (!validateForm()) {
-                return;
-            }
-            
-            const submitBtn = document.getElementById('submitBtn');
-            const originalText = submitBtn.innerHTML;
-            
-            // Mostrar loading
-            submitBtn.innerHTML = '<span class="spinner"></span> Procesando...';
-            submitBtn.disabled = true;
-            document.getElementById('reservationForm').classList.add('loading');
-            
-            try {
-                const formData = new FormData(event.target);
-                
-                // Agregar datos de reserva
-                if (reservationData.tipo === 'servicio') {
-                    formData.append('servicio_id', reservationData.servicio_id);
-                    formData.append('modalidad_id', reservationData.modalidad_id);
-                    formData.append('tipo_reserva', 'servicio');
-                } else if (reservationData.tipo === 'paquete') {
-                    formData.append('paquete_tipo', reservationData.paquete_tipo);
-                    formData.append('paquete_servicios', JSON.stringify(reservationData.paquete_servicios));
-                    formData.append('tipo_reserva', 'paquete');
-                    // Para paquetes, usar modalidad por defecto (primera disponible)
-                    formData.append('modalidad_id', '1');
-                }
-                
-                // Enviar a endpoint real
-                const response = await fetch('guardar_reserva_cliente.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    if (result.requiere_pago && result.data.pago && result.data.pago.success) {
-                        // Redirigir a página de pago
-                        showAlert('success', 'Reserva creada exitosamente. Redirigiendo al pago...');
-                        
-                        setTimeout(() => {
-                            window.location.href = result.data.pago.url_pago;
-                        }, 2000);
-                        
-                    } else if (result.requiere_pago) {
-                        // Mostrar éxito pero con problema de pago
-                        showAlert('success', result.message + ' Puede realizar el pago posteriormente.');
-                        
-                        // Limpiar formulario
-                        limpiarFormulario();
-                        
-                        // Redirigir después de 5 segundos
-                        setTimeout(() => {
-                            window.location.href = 'cliente.php';
-                        }, 5000);
-                    } else {
-                        // Reserva sin pago requerido
-                        showAlert('success', result.message + ' Te contactaremos pronto para confirmar los detalles.');
-                        
-                        // Limpiar formulario
-                        limpiarFormulario();
-                        
-                        // Redirigir después de 5 segundos
-                        setTimeout(() => {
-                            window.location.href = 'cliente.php';
-                        }, 5000);
-                    }
-                } else {
-                    throw new Error(result.error || 'Error desconocido');
-                }
-                
-            } catch (error) {
-                console.error('Error en reserva:', error);
-                showAlert('danger', 'Error: ' + error.message + '. Por favor intente nuevamente.');
-            } finally {
-                // Restaurar botón
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-                document.getElementById('reservationForm').classList.remove('loading');
-            }
-        }
-
-        // Validar formulario antes de envío
-        function validateForm() {
-            const requiredFields = [
-                { id: 'nombre', message: 'El nombre es requerido' },
-                { id: 'telefono', message: 'El teléfono es requerido' },
-                { id: 'email', message: 'El email es requerido' },
-                { id: 'fecha_nacimiento', message: 'La fecha de nacimiento es requerida' },
-                { id: 'fecha_cita', message: 'Debe seleccionar una fecha' },
-                { id: 'hora_seleccionada', message: 'Debe seleccionar un horario' }
-            ];
-
-            for (const field of requiredFields) {
-                const element = document.getElementById(field.id);
-                if (!element.value.trim()) {
-                    showAlert('danger', field.message);
-                    element.focus();
-                    return false;
-                }
+            // Log FormData entries for debugging
+            for (let pair of formData.entries()) {
+                console.log(pair[0]+ ': ' + pair[1]); 
             }
 
-            // Validar email
-            const email = document.getElementById('email').value;
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                showAlert('danger', 'Por favor ingrese un email válido');
-                document.getElementById('email').focus();
-                return false;
-            }
-
-            // Validar modalidad para servicios individuales
             if (reservationData.tipo === 'servicio') {
-                const modalidadSelect = document.getElementById('modalidad_id');
-                if (!modalidadSelect.value) {
-                    showAlert('danger', 'Debe seleccionar una modalidad');
-                    modalidadSelect.focus();
-                    return false;
-                }
+                formData.append('servicio_id', reservationData.servicio_id);
+                formData.append('modalidad_id', reservationData.modalidad_id);
+                formData.append('tipo_reserva', 'servicio');
+            } else {
+                formData.append('tipo_reserva', 'paquete');
+                formData.append('modalidad_id', '1');
             }
 
-            // Validar términos y condiciones
-            const terminos = document.getElementById('acepta_terminos');
-            if (!terminos.checked) {
-                showAlert('danger', 'Debe aceptar los términos y condiciones');
-                terminos.focus();
+            // 🔹 Usa la ruta correcta
+            const response = await fetch('guardar_reserva_cliente.php', { method: 'POST', body: formData });
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('success', 'Reserva creada exitosamente.');
+                setTimeout(() => window.location.href = 'cliente.php', 3000);
+            } else throw new Error(result.error || 'Error desconocido');
+        } catch (err) {
+            console.error('Error en reserva:', err);
+            showAlert('danger', 'Error: ' + err.message);
+        } finally {
+            btn.innerHTML = original;
+            btn.disabled = false;
+        }
+    }
+
+    function validateForm() {
+        const f = ['nombre','telefono','email','fecha_nacimiento','fecha_cita','hora_seleccionada'];
+        for (let id of f) {
+            if (!document.getElementById(id).value.trim()) {
+                showAlert('danger','Por favor completa todos los campos requeridos.');
                 return false;
             }
-
-            return true;
         }
-
-        // Limpiar formulario después de reserva exitosa
-        function limpiarFormulario() {
-            document.getElementById('reservationForm').reset();
-            document.getElementById('hora_seleccionada').value = '';
-            
-            // Limpiar selecciones visuales
-            document.querySelectorAll('.time-slot.selected').forEach(slot => {
-                slot.classList.remove('selected');
-            });
+        if (!document.getElementById('acepta_terminos').checked) {
+            showAlert('danger','Debes aceptar los términos.');
+            return false;
         }
+        return true;
+    }
 
-        // Mostrar alertas
-        function showAlert(type, message) {
-            const container = document.getElementById('alertContainer');
-            container.innerHTML = `
-                <div class="alert alert-${type} fade-in">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
-                    ${message}
-                </div>
-            `;
-            
-            // Scroll to alert
-            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+    function showAlert(type, msg) {
+        const c = document.getElementById('alertContainer');
+        c.innerHTML = `<div class="alert alert-${type} fade-in">${msg}</div>`;
+        c.scrollIntoView({behavior:'smooth',block:'center'});
+    }
     </script>
 </body>
 </html>
