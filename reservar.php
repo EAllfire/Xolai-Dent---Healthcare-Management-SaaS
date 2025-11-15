@@ -576,24 +576,40 @@
         btn.disabled = true;
 
         try {
-            const formData = new FormData(e.target);
-            console.log(' reservationData:', reservationData);
+            const form = e.target;
+            
+            // 1. Recolectar datos de texto en un objeto JSON
+            const jsonData = {
+                nombre: form.nombre.value,
+                telefono: form.telefono.value,
+                email: form.email.value,
+                fecha_nacimiento: form.fecha_nacimiento.value,
+                fecha_cita: form.fecha_cita.value,
+                hora_seleccionada: form.hora_seleccionada.value,
+                observaciones: form.observaciones.value,
+            };
 
-            // Log FormData entries for debugging
-            for (let pair of formData.entries()) {
-                console.log(pair[0]+ ': ' + pair[1]); 
-            }
-
+            // 2. Añadir datos de la reserva al objeto JSON
             if (reservationData.tipo === 'servicio') {
-                formData.append('servicio_id', reservationData.servicio_id);
-                formData.append('modalidad_id', reservationData.modalidad_id);
-                formData.append('tipo_reserva', 'servicio');
+                jsonData.servicio_id = reservationData.servicio_id;
+                jsonData.modalidad_id = reservationData.modalidad_id;
+                jsonData.tipo_reserva = 'servicio';
             } else {
-                formData.append('tipo_reserva', 'paquete');
-                formData.append('modalidad_id', '1');
+                jsonData.tipo_reserva = 'paquete';
+                jsonData.modalidad_id = '1'; // Modalidad por defecto para paquetes
             }
 
-            // 🔹 Usa la ruta correcta
+            // 3. Crear un FormData y añadir el JSON y los archivos
+            const formData = new FormData();
+            formData.append('json_data', JSON.stringify(jsonData));
+
+            const ineFile = form.foto_identificacion.files[0];
+            if (ineFile) formData.append('foto_identificacion', ineFile);
+
+            const ordenFile = form.foto_orden.files[0];
+            if (ordenFile) formData.append('foto_orden', ordenFile);
+
+            // 4. Enviar el FormData
             const response = await fetch('guardar_reserva_cliente.php', { method: 'POST', body: formData });
             const result = await response.json();
 
