@@ -8,17 +8,35 @@ use PHPMailer\PHPMailer\Exception;
 require_once __DIR__ . '/PHPMailer/src/Exception.php';
 require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/PHPMailer/src/SMTP.php';
+require_once __DIR__ . '/debug_log.php';
+
 // --- Carga de Configuración de Correo (Más Seguro) ---
-require_once __DIR__ . '/email_config.php';
+// Intentar cargar el archivo de configuración, si existe.
+$email_config_path = __DIR__ . '/email_config.php';
+if (file_exists($email_config_path)) {
+    require_once $email_config_path;
+}
+
+// Helper para obtener configuración SMTP de forma robusta:
+function smtp_config($key, $default = null) {
+    // Primero, constantes definidas por email_config.php
+    if (defined($key)) return constant($key);
+    // Luego, variables de entorno
+    $env = getenv($key);
+    if ($env !== false) return $env;
+    return $default;
+}
 
 function send_appointment_confirmation_email($conn, $cita_id, $paciente_id, $recipient_email) {
     // --- CORRECCIÓN: Validar que el email del destinatario es válido ---
+    log_message("[EMAIL] Iniciando envío para Cita ID: {$cita_id} a {$recipient_email}");
     if (!filter_var($recipient_email, FILTER_VALIDATE_EMAIL)) {
-        error_log("Intento de envío a un correo inválido: " . $recipient_email);
+        log_message("[EMAIL] FALLO: El formato del correo '{$recipient_email}' es inválido.");
         return false;
     }
 
     // Obtener todos los datos necesarios para el correo
+    log_message("[EMAIL] Obteniendo datos de la cita de la BD...");
     $sql = "SELECT
                 c.fecha,
                 c.hora_inicio,
@@ -39,34 +57,55 @@ function send_appointment_confirmation_email($conn, $cita_id, $paciente_id, $rec
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $cita_id);
     if (!$stmt->execute()) {
-        error_log("Error al ejecutar la consulta para obtener datos de la cita: " . $stmt->error);
+        log_message("[EMAIL] FALLO: Error al ejecutar la consulta para obtener datos de la cita: " . $stmt->error);
         return false;
     }
-    $result = $stmt->get_result(); // Usar get_result() es más limpio si está disponible.
-    if ($result->num_rows === 0) {
-        error_log("No se encontró la cita con ID: " . $cita_id);
+
+    // --- CORRECCIÓN: Reemplazar get_result() para compatibilidad con servidores sin mysqlnd ---
+    $stmt->store_result();
+    if ($stmt->num_rows === 0) {
+        log_message("[EMAIL] FALLO: No se encontró la cita con ID: " . $cita_id);
         return false;
     }
-    $data = $result->fetch_assoc();
+
+    // Vincular los resultados a variables
+    $stmt->bind_result(
+        $fecha, $hora_inicio, $hora_fin, $nota_paciente, $token,
+        $nombre_paciente, $apellido_paciente, $nombre_servicio,
+        $descripcion_servicio, $nombre_modalidad
+    );
+    $stmt->fetch();
+
+    // Crear el array de datos manualmente
+    $data = [
+        'fecha' => $fecha, 'hora_inicio' => $hora_inicio, 'hora_fin' => $hora_fin,
+        'nota_paciente' => $nota_paciente, 'token' => $token, 'nombre_paciente' => $nombre_paciente,
+        'apellido_paciente' => $apellido_paciente, 'nombre_servicio' => $nombre_servicio,
+        'descripcion_servicio' => $descripcion_servicio, 'nombre_modalidad' => $nombre_modalidad
+    ];
     $stmt->close();
 
+    log_message("[EMAIL] Datos de la cita obtenidos correctamente. Nombre: " . $data['nombre_paciente']);
     $nombre_completo_paciente = trim($data['nombre_paciente'] . ' ' . $data['apellido_paciente']);
 
     // Leer la plantilla de correo
     // --- CORRECCIÓN: Ruta de plantilla más robusta ---
     $template_path = dirname(__DIR__) . '/email_template_cita.html';
     if (!file_exists($template_path)) {
-        error_log("No se encuentra la plantilla de email: " . $template_path);
+        log_message("[EMAIL] FALLO: No se encuentra la plantilla de email en la ruta: " . $template_path);
         return false;
     }
     $template = file_get_contents($template_path);
 
     // Reemplazar los placeholders
     // --- CORRECCIÓN: Construcción de URL más segura ---
-    $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-    $base_url = $scheme . "://" . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF'], 2); // Sube dos niveles desde /includes/
-    $link_modificar = $base_url . '/modificar_cita.php?token=' . $data['token'];
-    $link_cancelar = $base_url . '/eliminar_cita_cliente.php?token=' . $data['token'];
+    // Es más seguro usar una URL base fija o configurable para evitar problemas con $_SERVER
+    // en diferentes entornos o al ejecutar scripts en segundo plano.
+    // Asegúrate de que esta URL base sea la correcta para tu despliegue.
+    $base_url = 'https://ha.angelescuauhtemoc.com/Agenda'; 
+
+    $link_modificar = $base_url . '/modificar_cita.php?id=' . $cita_id; // Usar ID de cita
+    $link_cancelar = $base_url . '/eliminar_cita_cliente.php?id=' . $cita_id; // Usar ID de cita
 
     $replacements = [
         '{modalidad}' => htmlspecialchars($data['nombre_modalidad']),
@@ -90,17 +129,21 @@ function send_appointment_confirmation_email($conn, $cita_id, $paciente_id, $rec
     $mail = new PHPMailer(true);
 
     try {
+        log_message("[EMAIL] Configurando servidor SMTP (Host: " . smtp_config('SMTP_HOST', 'smtp.gmail.com') . ", Usuario: " . smtp_config('SMTP_USERNAME', 'eliordo625@gmail.com') . ")");
         // Configuración del servidor SMTP
         $mail->isSMTP();
-        $mail->Host       = SMTP_HOST;
+        $mail->Host       = smtp_config('SMTP_HOST', 'smtp.gmail.com');
         $mail->SMTPAuth   = true;
-        $mail->Username   = SMTP_USERNAME;
-        $mail->Password   = SMTP_PASSWORD;
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = SMTP_PORT;
+        $mail->Username   = smtp_config('SMTP_USERNAME', 'eliordo625@gmail.com');
+        $mail->Password   = smtp_config('SMTP_PASSWORD', 'ctbh gbtt pfek elen');
+        $secure = smtp_config('SMTP_SECURE', PHPMailer::ENCRYPTION_SMTPS);
+        $mail->SMTPSecure = $secure;
+        $mail->Port       = intval(smtp_config('SMTP_PORT', 465));
 
         // Remitente y destinatarios
-        $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+        $from_email = smtp_config('SMTP_FROM_EMAIL', 'eliordo625@gmail.com');
+        $from_name = smtp_config('SMTP_FROM_NAME', 'Hospital Angeles Cuauhtémoc');
+        $mail->setFrom($from_email, $from_name);
         $mail->addAddress($recipient_email, $nombre_completo_paciente);
 
         // Contenido del correo
@@ -111,11 +154,15 @@ function send_appointment_confirmation_email($conn, $cita_id, $paciente_id, $rec
         $mail->CharSet = 'UTF-8';
 
         $mail->send();
-        error_log("Correo de confirmación enviado a: " . $recipient_email);
+        log_message("[EMAIL] ÉXITO: Correo de confirmación enviado a: " . $recipient_email);
         return true;
     } catch (Exception $e) {
         // --- MEJORA: Propagar la excepción para un mejor manejo de errores ---
-        error_log("Error de PHPMailer al enviar el correo: {$mail->ErrorInfo}");
-        throw new Exception("No se pudo enviar el correo de confirmación. Error: {$mail->ErrorInfo}");
+        // Registrar el error, pero NO lanzar excepción para que la creación de la cita no falle.
+        log_message("[EMAIL] FALLO CRÍTICO: Error de PHPMailer al enviar el correo: {$mail->ErrorInfo}");
+        log_message("[EMAIL] Detalle de excepción: " . $e->getMessage());
+        return false;
     }
 }
+
+// Intentionally omit closing PHP tag to avoid accidental trailing whitespace/output

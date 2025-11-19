@@ -3219,6 +3219,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
 
       document.getElementById('formAgendar').onsubmit = function(e) {
         e.preventDefault();
+        console.log('Formulario de agendar enviado.'); // Debug log: Se inicia el envío del formulario
         var fecha = document.getElementById('agendarFecha').value;
         var horaInicio = document.getElementById('agendarHoraInicio').value;
         var horaFin = document.getElementById('agendarHoraFin').value;
@@ -3236,9 +3237,6 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           alert('Error: No se ha seleccionado un paciente. Por favor, busque y seleccione un paciente antes de guardar.');
           return;
         }
-
-        // --- CORRECCIÓN CRÍTICA: Enviar datos como JSON ---
-        // Construir un objeto JavaScript con los datos del formulario.
         const citaData = {
             fecha: fecha,
             hora_inicio: horaInicio,
@@ -3252,8 +3250,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             nota_interna: notaInterna,
             nota_paciente: notaPaciente
         };
+        console.log('Datos de la cita para enviar:', citaData); // Debug log: Datos preparados para el fetch
 
-        // Enviar los datos como una cadena JSON.
+        // --- CORRECCIÓN: Usar una ruta absoluta para evitar el error 404 ---
+        // Esto asegura que la URL sea siempre correcta, sin importar la página actual.
         fetch('guardar_cita.php', {
           method: 'POST',
           headers: {
@@ -3262,21 +3262,40 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           },
           body: JSON.stringify(citaData)
         })
-        .then(r => r.json())
-        .then(resp => {
-          if (resp.success) {
-            alert('Cita agendada correctamente.');
-            document.getElementById('modalAgendar').style.display = 'none';
-            if (typeof calendar !== 'undefined' && calendar.refetchEvents) {
-              calendar.refetchEvents();
+        .then(response => { console.log('Respuesta de fetch recibida (antes de procesar):', response); return response; }) // Debug log: Respuesta HTTP recibida
+        .then(response => {
+            // --- MEJORA: Manejo de respuesta robusto ---
+            // Primero, clonamos la respuesta para poder leerla dos veces (una como texto, otra como json).
+            const responseClone = response.clone();
+            return response.json().catch(() => {
+                // Si falla el parseo de JSON, leemos la respuesta como texto.
+                return responseClone.text().then(text => {
+                    // Lanzamos un error personalizado con el texto del servidor.
+                    console.error('Error: La respuesta del servidor no es un JSON válido. Texto recibido:', text); // Debug log: Error de parseo JSON
+                    throw new Error(`La respuesta del servidor no es un JSON válido:\n\n${text}`);
+                });
+            });
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Cita agendada correctamente.');
+                console.log('Cita agendada con éxito:', data); // Debug log: Cita guardada exitosamente
+                document.getElementById('modalAgendar').style.display = 'none';
+                if (typeof calendar !== 'undefined' && calendar.refetchEvents) {
+                    calendar.refetchEvents();
+                }
+            } else {
+                alert('Error al guardar cita: ' + (data.error_details || data.error || 'Error desconocido.'));
             }
-          } else {
-            alert('Error al guardar cita: ' + (resp.error_details || resp.error || 'Error desconocido.'));
-          }
         })
         .catch(err => {
-            console.error('Error en fetch:', err);
-            alert('Error de conexión al intentar guardar la cita.');
+            console.error('Error en fetch (bloque catch):', err); // Debug log: Error capturado en el fetch
+            // Mejora: Dar un mensaje más específico para errores de red.
+            if (err.message.includes('Failed to fetch')) {
+                alert('Error de red: No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet e intenta de nuevo.');
+            } else {
+                alert('Error al procesar la respuesta del servidor: ' + err.message);
+            }
         });
       };
     });
