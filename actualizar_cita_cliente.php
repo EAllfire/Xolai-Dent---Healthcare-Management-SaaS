@@ -125,4 +125,3 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Error interno del servidor. Por favor, contacte al administrador.', 'details' => $t->getMessage()]);
 }
-?>

@@ -45,6 +45,9 @@ try {
         throw new Exception("Error de conexión a la base de datos.");
     }
 
+    // Cargar funciones de WhatsApp
+    require_once(__DIR__ . "/includes/whatsapp_functions.php");
+
     // ===============================
     //  CAPTURA Y VALIDACIÓN DE DATOS DE ENTRADA
     // ===============================
@@ -68,6 +71,7 @@ try {
     $servicio_id = !empty($input_data['servicio_id']) ? (int)$input_data['servicio_id'] : null;
     $tipo_reserva = $input_data['tipo_reserva'] ?? '';
     $observaciones = $input_data['observaciones'] ?? '';
+    $portal_usuario_id = !empty($input_data['portal_usuario_id']) ? (int)$input_data['portal_usuario_id'] : null;
 
     // Validación de campos requeridos
     if (empty($nombre_completo) || empty($telefono) || empty($email) || empty($fecha_cita) || empty($hora_seleccionada) || empty($fecha_nacimiento)) {
@@ -103,25 +107,31 @@ try {
     $nombre = $nombre_partes[0];
     $apellido = $nombre_partes[1] ?? '';
 
-    // 1. GESTIÓN DE PACIENTE (BUSCAR O CREAR)
-    $stmt_check = $conn->prepare("SELECT id FROM portal_pacientes WHERE correo = ? LIMIT 1");
-    $stmt_check->bind_param("s", $email);
-    $stmt_check->execute();
-    $stmt_check->store_result();
-    
-    if ($stmt_check->num_rows > 0) {
-        $stmt_check->bind_result($paciente_id_existente);
-        $stmt_check->fetch();
-        $paciente_id = $paciente_id_existente;
-        $stmt_update = $conn->prepare("UPDATE portal_pacientes SET nombre = ?, apellido = ?, telefono = ? WHERE id = ?");
-        $stmt_update->bind_param("sssi", $nombre, $apellido, $telefono, $paciente_id);
-        if (!$stmt_update->execute()) throw new Exception("Error al actualizar paciente: " . $stmt_update->error);
+    // 1. GESTIÓN DE PACIENTE (PRIORIZAR ID DEL PORTAL)
+    if ($portal_usuario_id) {
+        // Si viene un ID del portal, usamos ese ID directamente.
+        $paciente_id = $portal_usuario_id;
+        // Opcional: Actualizar los datos del paciente por si cambiaron en el portal.
+        // En este caso, como los campos están bloqueados, no es estrictamente necesario,
+        // pero es una buena práctica por si en el futuro se permiten cambios.
+        $stmt_update = $conn->prepare("UPDATE portal_pacientes SET nombre = ?, apellido = ?, telefono = ?, correo = ? WHERE id = ?");
+        $stmt_update->bind_param("ssssi", $nombre, $apellido, $telefono, $email, $paciente_id);
+        if (!$stmt_update->execute()) throw new Exception("Error al actualizar paciente desde portal: " . $stmt_update->error);
     } else {
-        $stmt_paciente = $conn->prepare("INSERT INTO portal_pacientes (nombre, apellido, telefono, correo, comentarios, tipo, origen) VALUES (?, ?, ?, ?, ?, 'cliente', 'web')");
-        $comentarios_paciente = "Fecha nacimiento: " . $fecha_nacimiento . ($observaciones ? " | " . $observaciones : "");
-        $stmt_paciente->bind_param("sssss", $nombre, $apellido, $telefono, $email, $comentarios_paciente);
-        if (!$stmt_paciente->execute()) throw new Exception("Error al crear paciente: " . $stmt_paciente->error);
-        $paciente_id = $conn->insert_id;
+        // Si NO viene un ID del portal, se busca por email o se crea uno nuevo.
+        $stmt_check = $conn->prepare("SELECT id FROM portal_pacientes WHERE correo = ? LIMIT 1");
+        $stmt_check->bind_param("s", $email);
+        $stmt_check->execute();
+        $result_check = $stmt_check->get_result();
+        if ($paciente_existente = $result_check->fetch_assoc()) {
+            $paciente_id = $paciente_existente['id'];
+        } else {
+            $stmt_paciente = $conn->prepare("INSERT INTO portal_pacientes (nombre, apellido, telefono, correo, fecha_nacimiento, comentarios, tipo, origen) VALUES (?, ?, ?, ?, ?, ?, 'cliente', 'web')");
+            $comentarios_paciente = $observaciones;
+            $stmt_paciente->bind_param("sssssss", $nombre, $apellido, $telefono, $email, $fecha_nacimiento, $comentarios_paciente);
+            if (!$stmt_paciente->execute()) throw new Exception("Error al crear paciente: " . $stmt_paciente->error);
+            $paciente_id = $conn->insert_id;
+        }
     }
 
     // 2. PREPARACIÓN DE DATOS DE LA CITA
@@ -195,9 +205,7 @@ try {
     $cita_id = $conn->insert_id;
 
     // 5. CERRAR TODOS LOS STATEMENTS ANTES DE CONFIRMAR LA TRANSACCIÓN
-    $stmt_check->close();
-    if (isset($stmt_update)) $stmt_update->close();
-    if (isset($stmt_paciente)) $stmt_paciente->close();
+    if (isset($stmt_check)) $stmt_check->close();
     $stmt_estado->close();
     $stmt_prof->close();
     if (isset($stmt_servicio_paq)) $stmt_servicio_paq->close();
@@ -208,7 +216,47 @@ try {
     // 6. CONFIRMAR LA TRANSACCIÓN
     $conn->commit();
 
-    // 7. PROCESAR PAGO (POST-TRANSACCIÓN)
+    // 7. ENVIAR NOTIFICACIONES (WHATSAPP Y EMAIL - POST-TRANSACCIÓN)
+    try {
+        // Obtener datos de la cita para notificaciones
+        $stmt_notif = $conn->prepare("
+            SELECT 
+                p.nombre,
+                p.apellido,
+                p.telefono,
+                m.nombre as modalidad_nombre,
+                s.descripcion,
+                c.fecha,
+                c.hora_inicio
+            FROM agenda_citas c
+            JOIN portal_pacientes p ON c.paciente_id = p.id
+            LEFT JOIN agenda_modalidades m ON c.modalidad_id = m.id
+            LEFT JOIN portal_servicios s ON c.servicio_id = s.id
+            WHERE c.id = ?
+        ");
+        $stmt_notif->bind_param("i", $cita_id);
+        $stmt_notif->execute();
+        $stmt_notif->bind_result($nom_pac, $ape_pac, $tel_pac, $mod_nombre, $desc_serv, $fec_cita, $hor_cita);
+        $stmt_notif->fetch();
+        $stmt_notif->close();
+
+        // Enviar WhatsApp
+        if ($tel_pac && $mod_nombre) {
+            $desc_final = !empty($desc_serv) ? $desc_serv : 'Servicio de imagenología';
+            enviarWhatsAppSilencioso(
+                $tel_pac,
+                $nom_pac . ' ' . $ape_pac,
+                $mod_nombre,
+                $fec_cita,
+                $hor_cita,
+                $desc_final
+            );
+        }
+    } catch (Exception $e) {
+        error_log("Error al enviar notificaciones en guardar_reserva_cliente.php: " . $e->getMessage());
+    }
+
+    // 8. PROCESAR PAGO (POST-TRANSACCIÓN)
     $response = [];
     try {
         require_once(__DIR__ . '/includes/GestorPagos.php');

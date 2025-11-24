@@ -589,6 +589,9 @@
                 observaciones: form.observaciones.value,
             };
 
+            // Añadir el ID del paciente a los datos que se envían, si existe
+            addPatientIdToData(jsonData);
+
             // 2. Añadir datos de la reserva al objeto JSON
             if (reservationData.tipo === 'servicio') {
                 jsonData.servicio_id = reservationData.servicio_id;

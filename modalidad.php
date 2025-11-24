@@ -504,6 +504,9 @@
         // Función para reservar servicio
         function reservarServicio(servicioId, servicioNombre, modalidadId, modalidadNombre) {
             // Redirigir a página de reserva
+            const currentParams = new URLSearchParams(window.location.search);
+            const portalUsuarioId = currentParams.get('portal_usuario_id');
+
             const params = new URLSearchParams({
                 tipo: 'servicio',
                 servicio_id: servicioId,
@@ -511,6 +514,9 @@
                 modalidad_id: modalidadId,
                 modalidad_nombre: modalidadNombre
             });
+
+            // Si existe un portal_usuario_id, lo añadimos a los parámetros
+            if (portalUsuarioId) params.append('portal_usuario_id', portalUsuarioId);
             
             window.location.href = `reservar.php?${params.toString()}`;
         }

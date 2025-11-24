@@ -291,8 +291,13 @@
 
         // Función para ver modalidad
         function verModalidad(id, nombre) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const portalUsuarioId = urlParams.get('portal_usuario_id');
+
             // Redirigir a página de servicios de la modalidad
-            window.location.href = `modalidad.php?id=${id}&nombre=${encodeURIComponent(nombre)}`;
+            let url = `modalidad.php?id=${id}&nombre=${encodeURIComponent(nombre)}`;
+            if (portalUsuarioId) url += `&portal_usuario_id=${portalUsuarioId}`;
+            window.location.href = url;
         }
 
         // Función para ver paquete
