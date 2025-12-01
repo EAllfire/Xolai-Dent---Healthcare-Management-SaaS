@@ -1,67 +1,82 @@
 <?php
+// email_functions.php – versión estable para GoDaddy con SMTP local y UTF-8
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
-require_once __DIR__ . '/PHPMailer/src/SMTP.php';
-require_once __DIR__ . '/PHPMailer/src/Exception.php';
+require_once __DIR__ . "/PHPMailer/src/PHPMailer.php";
+require_once __DIR__ . "/PHPMailer/src/SMTP.php";
+require_once __DIR__ . "/PHPMailer/src/Exception.php";
 
-require_once __DIR__ . '/email_log.php';
-require_once __DIR__ . '/email_config.php';
+require_once __DIR__ . "/email_log.php";
+require_once __DIR__ . "/email_config.php";
 
-/**
- * Enviar email usando plantilla HTML
- */
-function enviarCorreoCita($destinatario, $asunto, $variables)
+function enviarCorreoCita($emailDestino, $asunto, $vars)
 {
-    log_email("[EMAIL] Iniciando envío a $destinatario");
-
-    $template_path = __DIR__ . '/../email_template_cita.html';
-
-    if (!file_exists($template_path)) {
-        log_email("[EMAIL] ERROR: No se encontró plantilla $template_path");
-        return false;
-    }
-
-    // Cargar plantilla
-    $html = file_get_contents($template_path);
-
-    // Reemplazar variables
-    foreach ($variables as $key => $value) {
-        $html = str_replace("{" . $key . "}", $value, $html);
-    }
-
-    $mail = new PHPMailer(true);
+    log_email("Iniciando envío de correo a $emailDestino");
 
     try {
-        // --- CONFIG SMTP ---
+        $mail = new PHPMailer(true);
+
+        // ===== SMTP LOCAL (Exim/Postfix del servidor GoDaddy) =====
         $mail->isSMTP();
-        $mail->Host       = SMTP_HOST;
-        $mail->SMTPAuth   = true;
-        $mail->Username   = SMTP_USERNAME;
-        $mail->Password   = SMTP_PASSWORD;
-        $mail->SMTPSecure = SMTP_SECURE;   // ssl
-        $mail->Port       = SMTP_PORT;     // 465
+        $mail->Host       = 'localhost'; // envío directo desde el servidor
+        $mail->Port       = 25;          // puerto estándar de envío local
+        $mail->SMTPAuth   = false;       // no requiere autenticación
+        $mail->SMTPSecure = false;       // sin TLS
+        $mail->SMTPAutoTLS = false;      // no forzar TLS
 
-        $mail->CharSet = "UTF-8";
+        // ===== UTF-8 =====
+        $mail->CharSet  = "UTF-8";
+        $mail->Encoding = "base64";
 
-        // Remitente y destino
+        // ===== NO DEBUG EN RESPUESTA HTTP =====
+        $mail->SMTPDebug  = 0;
+        $mail->Debugoutput = function ($str, $level) {
+            log_email("[SMTP DEBUG] $str");
+        };
+
+        // ===== REMITENTE =====
         $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-        $mail->addAddress($destinatario);
 
-        // Contenido
+        // DESTINATARIO
+        $mail->addAddress($emailDestino);
+
+        // ===== CONTENIDO =====
         $mail->isHTML(true);
+
         $mail->Subject = $asunto;
-        $mail->Body    = $html;
 
-        $mail->send();
+        $mail->Body = "
+            <meta charset='UTF-8'>
+            <h2>Confirmación de Cita</h2>
 
-        log_email("[EMAIL] Enviado correctamente a $destinatario");
+            <p><strong>Paciente:</strong> {$vars['nombre_paciente']}</p>
+            <p><strong>Modalidad:</strong> {$vars['modalidad']}</p>
+            <p><strong>Servicio:</strong> {$vars['servicio']}</p>
+            <p><strong>Fecha:</strong> {$vars['fecha']}</p>
+            <p><strong>Hora:</strong> {$vars['hora_inicio']} – {$vars['hora_fin']}</p>
+            <p><strong>Notas:</strong> {$vars['notas_paciente']}</p>
 
-        return true;
+            <br><small>Este es un correo automático, por favor no responder.</small>
+        ";
+
+        $mail->AltBody = "Confirmación de cita para {$vars['nombre_paciente']}";
+
+        log_email("Intentando enviar correo con asunto '$asunto'...");
+
+        // ===== ENVIAR =====
+        if (!$mail->send()) {
+            log_email_error("PHPMailer->send() devolvió FALSE");
+            log_email_error("Detalle: " . $mail->ErrorInfo);
+            return ["success" => false, "error" => $mail->ErrorInfo];
+        }
+
+        log_email("Correo enviado correctamente a $emailDestino");
+        return ["success" => true];
 
     } catch (Exception $e) {
-        log_email("[EMAIL] ERROR SMTP: " . $mail->ErrorInfo);
-        return false;
+        log_email_error("Excepción PHPMailer: " . $e->getMessage());
+        return ["success" => false, "error" => $e->getMessage()];
     }
 }

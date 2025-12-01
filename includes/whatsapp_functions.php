@@ -75,7 +75,7 @@ if (!function_exists('enviar_whatsapp_template')) {
 
 // Proteger definición de enviarWhatsAppSilencioso
 if (!function_exists('enviarWhatsAppSilencioso')) {
-    function enviarWhatsAppSilencioso($telefono, $nombre, $modalidad, $fecha, $hora, $nota)
+    function enviarWhatsAppSilencioso($telefono, $nombre, $modalidad, $fecha, $hora, $nota, $url_confirmar, $url_reprogramar, $url_cancelar)
     {
         log_message("[WPP] Iniciando enviarWhatsAppSilencioso() para $telefono");
 
@@ -86,7 +86,10 @@ if (!function_exists('enviarWhatsAppSilencioso')) {
             $modalidad,
             $fecha,
             $hora,
-            $nota ?: "Sin notas"
+            $nota ?: "Sin notas",
+            $url_confirmar,
+            $url_reprogramar,
+            $url_cancelar
         ];
 
         return enviar_whatsapp_template($telefono, $template, $params);

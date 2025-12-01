@@ -156,7 +156,8 @@
             {nombre: 'asistió', color: '#E91E63', label: 'Asistió'},
             {nombre: 'no asistió', color: '#FF7F50', label: 'No asistió'},
             {nombre: 'pendiente', color: '#F44336', label: 'Pendiente'},
-            {nombre: 'en espera', color: '#4CAF50', label: 'En espera'}
+            {nombre: 'en espera', color: '#4CAF50', label: 'En espera'},
+            {nombre: 'cancelada', color: '#797a79ff', label : 'Cancelada'}
           ];
 
           // Crear puntos de estados

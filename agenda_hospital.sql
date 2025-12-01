@@ -155,8 +155,8 @@ INSERT INTO agenda_estado_cita (id, nombre) VALUES
 (3, 'asistió'),
 (4, 'no asistió'),
 (5, 'pendiente'),
-(6, 'en espera');
-
+(6, 'en espera'),
+(7, 'cancelada');
 -- Tabla citas
 CREATE TABLE agenda_citas (
   id INT AUTO_INCREMENT PRIMARY KEY,

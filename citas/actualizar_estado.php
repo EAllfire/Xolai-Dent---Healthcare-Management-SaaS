@@ -32,7 +32,8 @@ try {
             'asistió' => 3,
             'no asistió' => 4,
             'pendiente' => 5,
-            'en espera' => 6
+            'en espera' => 6,
+            'cancelada' => 7
         ];
         
         if (!isset($estados_map[$nuevo_estado])) {
@@ -58,7 +59,8 @@ try {
                     'asistió' => '#E91E63',
                     'no asistió' => '#FF7F50',
                     'pendiente' => '#F44336',
-                    'en espera' => '#4CAF50'
+                    'en espera' => '#4CAF50',
+                    'cancelada' => '#797a79ff'
                 ];
                 
                 $response = [

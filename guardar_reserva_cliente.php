@@ -1,314 +1,349 @@
 <?php
-header('Content-Type: application/json');
-ob_start(); // Iniciar el almacenamiento en búfer de salida para capturar errores inesperados
+// =========================
+// CONFIGURACIÓN
+// =========================
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 
-/**
- * Envía una respuesta JSON estandarizada y termina la ejecución del script.
- * @param array $data Los datos a codificar en JSON.
- * @param int $statusCode El código de estado HTTP a enviar.
- */
-function responder_json($data, $statusCode = 200) {
-    // Limpiar cualquier salida de búfer inesperada (como errores de PHP si display_errors está activado)
-    if (ob_get_length()) {
-        ob_end_clean();
-    }
-    http_response_code($statusCode);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+header('Content-Type: application/json');
+
+// Includes
+require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/whatsapp_functions.php';
+require_once __DIR__ . '/includes/debug_log.php';
+
+// =========================
+// MANEJO DE FORM DATA CON JSON
+// =========================
+if (!isset($_POST['json_data'])) {
+    echo json_encode([
+        "success" => false,
+        "error"   => "No se recibieron datos del formulario"
+    ]);
     exit;
 }
 
-// ===============================
-//  CONFIGURACIÓN DE ERRORES Y DEPURACIÓN
-// ===============================
-ini_set('display_errors', 0); // No mostrar errores en producción. Usar logs.
-error_reporting(E_ALL);
-
-// Convertir todos los errores de PHP en excepciones para poder capturarlos en el bloque try-catch.
-set_error_handler(function($severity, $message, $file, $line) {
-    throw new ErrorException($message, 0, $severity, $file, $line);
-});
-
-// Proteger el script para que solo acepte peticiones POST.
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    responder_json(['success' => false, 'error' => 'Método no permitido.'], 405);
+// Decodificar los datos JSON
+$input_data = json_decode($_POST['json_data'], true);
+error_log("Datos JSON recibidos en guardar_reserva_cliente.php: " . print_r($input_data, true));
+if (json_last_error() !== JSON_ERROR_NONE) {
+    echo json_encode([
+        "success" => false,
+        "error"   => "Error al decodificar JSON"
+    ]);
+    exit;
 }
 
-$conn = null; // Inicializar la variable de conexión
-
-try {
-    // ===============================
-    //  CONEXIÓN A LA BASE DE DATOS
-    // ===============================
-    require_once(__DIR__ . "/includes/db.php");
-    if ($conn->connect_error) {
-        // Este error se maneja dentro de db.php, pero es una doble verificación.
-        throw new Exception("Error de conexión a la base de datos.");
+// =========================
+// VALIDAR DATOS BÁSICOS
+// =========================
+$required = ['nombre', 'telefono', 'email', 'fecha_nacimiento', 'fecha_cita', 'hora_seleccionada'];
+foreach ($required as $field) {
+    if (!isset($input_data[$field]) || empty($input_data[$field])) {
+        echo json_encode([
+            "success" => false,
+            "error"   => "Faltan datos requeridos: " . $field
+        ]);
+        exit;
     }
+}
 
-    // Cargar funciones de WhatsApp
-    require_once(__DIR__ . "/includes/whatsapp_functions.php");
+// =========================
+// RECOPILAR DATOS
+// =========================
+$fecha           = $input_data['fecha_cita'];
+$hora            = $input_data['hora_seleccionada'];
+$nombre_completo = $input_data['nombre'];
+$telefono        = $input_data['telefono'];
+$email           = $input_data['email'];
+$fecha_nacimiento = $input_data['fecha_nacimiento'];
 
-    // ===============================
-    //  CAPTURA Y VALIDACIÓN DE DATOS DE ENTRADA
-    // ===============================
-    // Los datos de texto vienen en un campo 'json_data' y los archivos en $_FILES.
-    if (!isset($_POST['json_data'])) {
-        throw new Exception("No se recibieron los datos del formulario (json_data faltante).");
+$servicio_id     = $input_data['servicio_id'] ?? null;
+$modalidad_id    = $input_data['modalidad_id'] ?? null;
+$observaciones   = $input_data['observaciones'] ?? '';
+
+$tipo_reserva    = $input_data['tipo_reserva'] ?? 'servicio';
+
+// 🔹 Obtener portal_usuario_id de los datos
+$portal_usuario_id = $input_data['portal_usuario_id'] ?? null;
+error_log("Valor de \$portal_usuario_id al inicio: " . var_export($portal_usuario_id, true));
+
+// =========================
+// MANEJO DE ARCHIVOS
+// =========================
+$url_identificacion = null;
+$url_orden_medica = null;
+$upload_dir = 'uploads/';
+
+if (!is_dir($upload_dir)) {
+    @mkdir($upload_dir, 0755, true);
+}
+
+// Procesar foto de identificación
+if (isset($_FILES['foto_identificacion']) && $_FILES['foto_identificacion']['error'] === UPLOAD_ERR_OK) {
+    $filename = uniqid('ine_') . '_' . basename($_FILES['foto_identificacion']['name']);
+    $target_file = $upload_dir . $filename;
+    if (move_uploaded_file($_FILES['foto_identificacion']['tmp_name'], $target_file)) {
+        $url_identificacion = $target_file;
     }
-    $input_data = json_decode($_POST['json_data'], true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new Exception("Error al procesar los datos del formulario (formato JSON inválido).");
+}
+
+// Procesar foto de orden médica
+if (isset($_FILES['foto_orden']) && $_FILES['foto_orden']['error'] === UPLOAD_ERR_OK) {
+    $filename = uniqid('orden_') . '_' . basename($_FILES['foto_orden']['name']);
+    $target_file = $upload_dir . $filename;
+    if (move_uploaded_file($_FILES['foto_orden']['tmp_name'], $target_file)) {
+        $url_orden_medica = $target_file;
     }
+}
 
-    // Asignar variables desde el JSON decodificado
-    $nombre_completo = $input_data['nombre'] ?? '';
-    $telefono = $input_data['telefono'] ?? '';
-    $email = $input_data['email'] ?? '';
-    $fecha_nacimiento = $input_data['fecha_nacimiento'] ?? '';
-    $fecha_cita = $input_data['fecha_cita'] ?? '';
-    $hora_seleccionada = $input_data['hora_seleccionada'] ?? '';
-    $modalidad_id = !empty($input_data['modalidad_id']) ? (int)$input_data['modalidad_id'] : null;
-    $servicio_id = !empty($input_data['servicio_id']) ? (int)$input_data['servicio_id'] : null;
-    $tipo_reserva = $input_data['tipo_reserva'] ?? '';
-    $observaciones = $input_data['observaciones'] ?? '';
-    $portal_usuario_id = !empty($input_data['portal_usuario_id']) ? (int)$input_data['portal_usuario_id'] : null;
+// =========================
+// DETERMINAR ID DEL PACIENTE - LÓGICA CORREGIDA
+// =========================
+$paciente_id = null;
 
-    // Validación de campos requeridos
-    if (empty($nombre_completo) || empty($telefono) || empty($email) || empty($fecha_cita) || empty($hora_seleccionada) || empty($fecha_nacimiento)) {
-        throw new Exception("Faltan datos requeridos: Nombre, teléfono, email, fecha de nacimiento, fecha de cita u hora.");
-    }
-
-    // ===============================
-    //  MANEJO DE ARCHIVOS (SI EXISTEN)
-    // ===============================
-    $upload_dir = 'uploads/';
-    if (!is_dir($upload_dir)) @mkdir($upload_dir, 0755, true);
+if (!empty($portal_usuario_id)) {
+    error_log("BRANCH: Intentando encontrar y actualizar paciente existente con portal_usuario_id: {$portal_usuario_id}");
+    // 🔹 BUSCAR EN portal_pacientes POR LA COLUMNA portal_usuario_id
+    $stmt = $conn->prepare("SELECT id FROM portal_pacientes WHERE portal_usuario_id = ?");
+    $stmt->bind_param("i", $portal_usuario_id);
+    $stmt->execute();
+    // Reemplazar get_result() con bind_result() para compatibilidad sin mysqlnd
+    $stmt->store_result(); // Almacenar el resultado para poder usar num_rows
     
-    $url_identificacion = null;
-    if (isset($_FILES['foto_identificacion']) && $_FILES['foto_identificacion']['error'] === UPLOAD_ERR_OK) {
-        $filename = uniqid('ine_') . '_' . basename($_FILES['foto_identificacion']['name']);
-        $target_file = $upload_dir . $filename;
-        if (move_uploaded_file($_FILES['foto_identificacion']['tmp_name'], $target_file)) $url_identificacion = $target_file;
+    if ($stmt->num_rows > 0) {
+        $stmt->bind_result($paciente_id_from_db); // Enlazar el ID de la columna a una variable
+        $stmt->fetch(); // Obtener el resultado
+        $paciente_id = $paciente_id_from_db; // Asignar al paciente_id
+        
+        // 🔹 ACTUALIZAR DATOS DEL PACIENTE EXISTENTE
+        $nombre_partes = explode(' ', trim($nombre_completo), 2);
+        $nombre = $nombre_partes[0];
+        $apellido = $nombre_partes[1] ?? '';
+        
+        $stmt_update = $conn->prepare("UPDATE portal_pacientes SET nombre = ?, apellido = ?, telefono = ?, correo = ?, fecha_nacimiento = ? WHERE portal_usuario_id = ?");
+        $stmt_update->bind_param("sssssi", $nombre, $apellido, $telefono, $email, $fecha_nacimiento, $portal_usuario_id);
+        $stmt_update->execute();
+        $stmt_update->close();
+        
+        error_log("✅ Paciente encontrado y actualizado - Portal Usuario ID: {$portal_usuario_id}, Paciente ID REAL: {$paciente_id}");
+        
+    } else {
+        // ❌ No se encontró paciente con ese portal_usuario_id
+        error_log("ERROR: No se encontró paciente con portal_usuario_id: {$portal_usuario_id}. Saliendo.");
+        echo json_encode([
+            "success" => false,
+            "error" => "No se encontró un paciente con el ID del portal proporcionado",
+            "portal_usuario_id" => $portal_usuario_id
+        ]);
+        exit;
     }
+    $stmt->close();
     
-    $url_orden_medica = null;
-    if (isset($_FILES['foto_orden']) && $_FILES['foto_orden']['error'] === UPLOAD_ERR_OK) {
-        $filename = uniqid('orden_') . '_' . basename($_FILES['foto_orden']['name']);
-        $target_file = $upload_dir . $filename;
-        if (move_uploaded_file($_FILES['foto_orden']['tmp_name'], $target_file)) $url_orden_medica = $target_file;
-    }
-
-    // ===============================
-    //  LÓGICA DE NEGOCIO Y BASE DE DATOS
-    // ===============================
-    $conn->begin_transaction();
-
+} else {
+    error_log("BRANCH: Creando nuevo paciente (portal_usuario_id está vacío)");
+    // =========================
+    // CREAR PACIENTE NORMAL (SIN PORTAL)
+    // =========================
     $nombre_partes = explode(' ', trim($nombre_completo), 2);
     $nombre = $nombre_partes[0];
     $apellido = $nombre_partes[1] ?? '';
-
-    // 1. GESTIÓN DE PACIENTE (PRIORIZAR ID DEL PORTAL)
-    if ($portal_usuario_id) {
-        // Si viene un ID del portal, usamos ese ID directamente.
-        $paciente_id = $portal_usuario_id;
-        // Opcional: Actualizar los datos del paciente por si cambiaron en el portal.
-        // En este caso, como los campos están bloqueados, no es estrictamente necesario,
-        // pero es una buena práctica por si en el futuro se permiten cambios.
-        $stmt_update = $conn->prepare("UPDATE portal_pacientes SET nombre = ?, apellido = ?, telefono = ?, correo = ? WHERE id = ?");
-        $stmt_update->bind_param("ssssi", $nombre, $apellido, $telefono, $email, $paciente_id);
-        if (!$stmt_update->execute()) throw new Exception("Error al actualizar paciente desde portal: " . $stmt_update->error);
-    } else {
-        // Si NO viene un ID del portal, se busca por email o se crea uno nuevo.
-        $stmt_check = $conn->prepare("SELECT id FROM portal_pacientes WHERE correo = ? LIMIT 1");
-        $stmt_check->bind_param("s", $email);
-        $stmt_check->execute();
-        $result_check = $stmt_check->get_result();
-        if ($paciente_existente = $result_check->fetch_assoc()) {
-            $paciente_id = $paciente_existente['id'];
-        } else {
-            $stmt_paciente = $conn->prepare("INSERT INTO portal_pacientes (nombre, apellido, telefono, correo, fecha_nacimiento, comentarios, tipo, origen) VALUES (?, ?, ?, ?, ?, ?, 'cliente', 'web')");
-            $comentarios_paciente = $observaciones;
-            $stmt_paciente->bind_param("sssssss", $nombre, $apellido, $telefono, $email, $fecha_nacimiento, $comentarios_paciente);
-            if (!$stmt_paciente->execute()) throw new Exception("Error al crear paciente: " . $stmt_paciente->error);
-            $paciente_id = $conn->insert_id;
-        }
-    }
-
-    // 2. PREPARACIÓN DE DATOS DE LA CITA
-    $hora_inicio = $hora_seleccionada . ":00";
-    $hora_fin = date("H:i:s", strtotime($hora_inicio) + 3600); // Duración de 1 hora por defecto
-
-    $stmt_estado = $conn->prepare("SELECT id FROM agenda_estado_cita WHERE nombre = 'reservado' LIMIT 1");
-    $stmt_estado->execute();
-    $stmt_estado->store_result();
-    $stmt_estado->bind_result($estado_id_existente);
-    $stmt_estado->fetch();
-    $estado_id = $estado_id_existente ?? 1; // Usar ID 1 como fallback
-
-    $stmt_prof = $conn->prepare("SELECT id FROM agenda_profesionales ORDER BY id LIMIT 1");
-    $stmt_prof->execute();
-    $stmt_prof->store_result();
-    $stmt_prof->bind_result($profesional_id_existente);
-    $stmt_prof->fetch();
-    $profesional_id = $profesional_id_existente;
-    if (!$profesional_id) throw new Exception("No hay profesionales disponibles para asignar la cita.");
-
-    if ($tipo_reserva === 'paquete') {
-        $stmt_servicio_paq = $conn->prepare("SELECT id FROM portal_servicios WHERE nombre LIKE '%paquete%' OR nombre LIKE '%integral%' LIMIT 1");
-        $stmt_servicio_paq->execute();
-        $stmt_servicio_paq->store_result();
-        if ($stmt_servicio_paq->num_rows > 0) {
-            $stmt_servicio_paq->bind_result($servicio_id);
-            $stmt_servicio_paq->fetch();
-        } else {
-            $stmt_first_serv = $conn->prepare("SELECT id, modalidad_id FROM portal_servicios ORDER BY id LIMIT 1");
-            $stmt_first_serv->execute();
-            $stmt_first_serv->store_result();
-            if ($stmt_first_serv->num_rows > 0) {
-                $stmt_first_serv->bind_result($servicio_id_data, $modalidad_id_data);
-                $stmt_first_serv->fetch();
-                $servicio_id = $servicio_id_data;
-                $modalidad_id = $modalidad_id_data;
-            } else {
-                throw new Exception("No hay servicios disponibles");
-            }
-        }
-        $nota_paciente = "Reserva de paquete web. Detalles en observaciones.";
-    } else {
-        if (empty($servicio_id) || empty($modalidad_id)) throw new Exception("Servicio o modalidad no especificados para la reserva.");
-        $nota_paciente = $observaciones;
-    }
-
-    if (empty($modalidad_id)) $modalidad_id = 1; // Fallback final para modalidad
-
-    // 3. VERIFICAR EMPALMES DE HORARIO
-    $sqlEmpalme = "SELECT COUNT(*) as total FROM agenda_citas 
-                   WHERE fecha = ? AND modalidad_id = ? 
-                   AND hora_inicio < ? AND hora_fin > ?";
-    $stmtEmpalme = $conn->prepare($sqlEmpalme);
-    $stmtEmpalme->bind_param("siss", $fecha_cita, $modalidad_id, $hora_fin, $hora_inicio);
-    $stmtEmpalme->execute();
-    $stmtEmpalme->store_result();
-    $stmtEmpalme->bind_result($total_empalme);
-    $stmtEmpalme->fetch();
-
-    if ($total_empalme > 0) throw new Exception("Ya existe una cita en ese horario para la modalidad seleccionada.");
-
-    // 4. CREAR LA CITA
-    $stmt_cita = $conn->prepare("INSERT INTO agenda_citas 
-        (fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, nota_paciente, nota_interna, tipo, url_identificacion, url_orden_medica)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $nota_interna = "Reserva web - Cliente: " . $nombre_completo . " | Email: " . $email;
-    $tipo_cita = ($tipo_reserva === 'paquete') ? 'paquete' : 'individual';
-    $stmt_cita->bind_param("sssiiiissssss", $fecha_cita, $hora_inicio, $hora_fin, $paciente_id, $profesional_id, $servicio_id, $modalidad_id, $estado_id, $nota_paciente, $nota_interna, $tipo_cita, $url_identificacion, $url_orden_medica);
-    if (!$stmt_cita->execute()) throw new Exception("Error al crear la cita: " . $stmt_cita->error);
-    $cita_id = $conn->insert_id;
-
-    // 5. CERRAR TODOS LOS STATEMENTS ANTES DE CONFIRMAR LA TRANSACCIÓN
-    if (isset($stmt_check)) $stmt_check->close();
-    $stmt_estado->close();
-    $stmt_prof->close();
-    if (isset($stmt_servicio_paq)) $stmt_servicio_paq->close();
-    if (isset($stmt_first_serv)) $stmt_first_serv->close();
-    $stmtEmpalme->close();
-    $stmt_cita->close();
-
-    // 6. CONFIRMAR LA TRANSACCIÓN
-    $conn->commit();
-
-    // 7. ENVIAR NOTIFICACIONES (WHATSAPP Y EMAIL - POST-TRANSACCIÓN)
-    try {
-        // Obtener datos de la cita para notificaciones
-        $stmt_notif = $conn->prepare("
-            SELECT 
-                p.nombre,
-                p.apellido,
-                p.telefono,
-                m.nombre as modalidad_nombre,
-                s.descripcion,
-                c.fecha,
-                c.hora_inicio
-            FROM agenda_citas c
-            JOIN portal_pacientes p ON c.paciente_id = p.id
-            LEFT JOIN agenda_modalidades m ON c.modalidad_id = m.id
-            LEFT JOIN portal_servicios s ON c.servicio_id = s.id
-            WHERE c.id = ?
-        ");
-        $stmt_notif->bind_param("i", $cita_id);
-        $stmt_notif->execute();
-        $stmt_notif->bind_result($nom_pac, $ape_pac, $tel_pac, $mod_nombre, $desc_serv, $fec_cita, $hor_cita);
-        $stmt_notif->fetch();
-        $stmt_notif->close();
-
-        // Enviar WhatsApp
-        if ($tel_pac && $mod_nombre) {
-            $desc_final = !empty($desc_serv) ? $desc_serv : 'Servicio de imagenología';
-            enviarWhatsAppSilencioso(
-                $tel_pac,
-                $nom_pac . ' ' . $ape_pac,
-                $mod_nombre,
-                $fec_cita,
-                $hor_cita,
-                $desc_final
-            );
-        }
-    } catch (Exception $e) {
-        error_log("Error al enviar notificaciones en guardar_reserva_cliente.php: " . $e->getMessage());
-    }
-
-    // 8. PROCESAR PAGO (POST-TRANSACCIÓN)
-    $response = [];
-    try {
-        require_once(__DIR__ . '/includes/GestorPagos.php');
-        $gestorPagos = new GestorPagos($conn);
-        $resultado_pago = $gestorPagos->crearPago($cita_id, 'simulador', 'tarjeta');
-
-        if ($resultado_pago['success']) {
-            $response['success'] = true;
-            $response['message'] = "Reserva creada exitosamente.";
-            $response['data'] = ["cita_id" => $cita_id, "pago" => $resultado_pago];
-        } else {
-            $response['success'] = true; // La cita se creó, pero el pago falló.
-            $response['message'] = "Reserva creada, pero hubo un problema al iniciar el pago.";
-            $response['pago_error'] = $resultado_pago['error'] ?? 'Error desconocido';
-            $response['data'] = ["cita_id" => $cita_id];
-        }
-    } catch (Exception $e) {
-        error_log('Error inicializando pago: ' . $e->getMessage());
-        $response['success'] = true; // La cita se creó, pero el sistema de pagos no está disponible.
-        $response['message'] = "Reserva creada. El sistema de pagos no está disponible en este momento.";
-        $response['data'] = ["cita_id" => $cita_id];
-    }
-
-    error_log("Reserva exitosa - Cita ID: {$cita_id}, Paciente ID: {$paciente_id}");
-    responder_json($response, 200);
-
-} catch (Exception $e) {
-    // Si algo falla, revertir la transacción.
-    if ($conn && $conn->ping()) {
-        $conn->rollback();
-    }
-    // Registrar el error detallado en los logs del servidor.
-    error_log("Error en guardar_reserva_cliente.php: " . $e->getMessage() . " en " . $e->getFile() . " línea " . $e->getLine());
     
-    // Enviar una respuesta de error genérica pero útil al cliente.
-    $userMessage = $e->getMessage();
-    // Filtrar mensajes para no exponer detalles internos, excepto los que son seguros.
-    if (strpos($userMessage, 'Ya existe una cita') === false) {
-        $userMessage = 'Ocurrió un error inesperado al procesar su solicitud.';
-    }
-    responder_json(['success' => false, 'error' => $userMessage], 500);
+    $stmt = $conn->prepare("INSERT INTO portal_pacientes (nombre, apellido, telefono, correo, fecha_nacimiento, tipo, origen) VALUES (?, ?, ?, ?, ?, 'cliente', 'web')");
+    $stmt->bind_param("sssss", $nombre, $apellido, $telefono, $email, $fecha_nacimiento);
 
-} finally {
-    // Asegurarse de que la conexión a la base de datos siempre se cierre.
-    if ($conn) {
-        $conn->close();
+    if (!$stmt->execute()) {
+        error_log("ERROR: Fallo al crear nuevo paciente: " . $stmt->error);
+        echo json_encode([
+            "success" => false,
+            "error" => "Error al crear paciente",
+            "db_error" => $stmt->error
+        ]);
+        exit;
+    }
+
+    $paciente_id = $stmt->insert_id;
+    $stmt->close();
+    error_log("Nuevo paciente creado sin portal_usuario_id, Paciente ID: {$paciente_id}");
+}
+
+// =========================
+// VALIDAR QUE TENEMOS PACIENTE_ID
+// =========================
+if (!$paciente_id) {
+    echo json_encode([
+        "success" => false,
+        "error" => "No se pudo determinar el ID del paciente"
+    ]);
+    exit;
+}
+
+// =========================
+// PREPARAR DATOS PARA LA CITA
+// =========================
+$hora_inicio = $hora . ":00";
+$hora_fin = date("H:i:s", strtotime($hora_inicio) + 3600); // 1 hora de duración
+
+// Obtener estado "reservado"
+$estado_id = 1; // Valor por defecto
+$stmt_estado = $conn->prepare("SELECT id FROM agenda_estado_cita WHERE nombre = 'reservado' LIMIT 1");
+if ($stmt_estado) {
+    $stmt_estado->execute();
+    $stmt_estado->bind_result($estado_id_temp);
+    $stmt_estado->fetch();
+    if ($estado_id_temp) $estado_id = $estado_id_temp;
+    $stmt_estado->close();
+}
+
+// Obtener profesional (primer disponible)
+$profesional_id = 1; // Valor por defecto
+$stmt_prof = $conn->prepare("SELECT id FROM agenda_profesionales ORDER BY id LIMIT 1");
+if ($stmt_prof) {
+    $stmt_prof->execute();
+    $stmt_prof->bind_result($profesional_id_temp);
+    $stmt_prof->fetch();
+    if ($profesional_id_temp) $profesional_id = $profesional_id_temp;
+    $stmt_prof->close();
+}
+
+// Si es paquete y no tiene servicio_id, buscar uno
+if ($tipo_reserva === 'paquete' && empty($servicio_id)) {
+    $stmt_servicio = $conn->prepare("SELECT id FROM portal_servicios WHERE nombre LIKE '%paquete%' OR nombre LIKE '%integral%' LIMIT 1");
+    if ($stmt_servicio) {
+        $stmt_servicio->execute();
+        $stmt_servicio->bind_result($servicio_id_temp);
+        $stmt_servicio->fetch();
+        if ($servicio_id_temp) $servicio_id = $servicio_id_temp;
+        $stmt_servicio->close();
     }
 }
 
-?>
-    $conn->close();
+if (empty($modalidad_id)) $modalidad_id = 1; // Fallback
+if (empty($servicio_id)) $servicio_id = 1; // Fallback
+
+// =========================
+// VERIFICAR DISPONIBILIDAD
+// =========================
+$total_empalme = 0;
+$stmt_empalme = $conn->prepare("SELECT COUNT(*) as total FROM agenda_citas WHERE fecha = ? AND modalidad_id = ? AND hora_inicio < ? AND hora_fin > ?");
+if ($stmt_empalme) {
+    $stmt_empalme->bind_param("siss", $fecha, $modalidad_id, $hora_fin, $hora_inicio);
+    $stmt_empalme->execute();
+    $stmt_empalme->bind_result($total_empalme);
+    $stmt_empalme->fetch();
+    $stmt_empalme->close();
 }
 
-responder_json($response);
-?>
+if ($total_empalme > 0) {
+    echo json_encode([
+        "success" => false,
+        "error" => "Ya existe una cita en ese horario para la modalidad seleccionada"
+    ]);
+    exit;
+}
+
+// =========================
+// CREAR CITA EN agenda_citas
+// =========================
+$nota_interna = "Reserva web - Cliente: " . $nombre_completo . " | Email: " . $email . ($portal_usuario_id ? " | Portal ID: " . $portal_usuario_id : "");
+$tipo_cita = ($tipo_reserva === 'paquete') ? 'paquete' : 'individual';
+
+$stmt_cita = $conn->prepare("
+    INSERT INTO agenda_citas 
+    (fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, nota_paciente, nota_interna, tipo, url_identificacion, url_orden_medica)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+");
+
+$stmt_cita->bind_param("sssiiiissssss", 
+    $fecha, 
+    $hora_inicio, 
+    $hora_fin, 
+    $paciente_id,  // 🔹 ESTE es el ID REAL de portal_pacientes (1 en tu ejemplo)
+    $profesional_id, 
+    $servicio_id, 
+    $modalidad_id, 
+    $estado_id, 
+    $observaciones, 
+    $nota_interna, 
+    $tipo_cita,
+    $url_identificacion,
+    $url_orden_medica
+);
+
+if (!$stmt_cita->execute()) {
+    echo json_encode([
+        "success" => false,
+        "error" => "Error al crear la cita",
+        "db_error" => $stmt_cita->error
+    ]);
+    exit;
+}
+
+$cita_id = $stmt_cita->insert_id;
+$stmt_cita->close();
+
+// ================================================================
+// ENVIAR NOTIFICACIÓN WPP (LÓGICA IDÉNTICA A guardar_cita.php)
+// ================================================================
+try {
+    // 1. Obtener datos frescos de la BD para asegurar consistencia
+    $stmt_data = $conn->prepare("SELECT p.nombre, p.apellido, p.telefono, m.nombre as modalidad_nombre FROM agenda_citas c JOIN portal_pacientes p ON c.paciente_id = p.id JOIN agenda_modalidades m ON c.modalidad_id = m.id WHERE c.id = ?");
+    $stmt_data->bind_param("i", $cita_id);
+    $stmt_data->execute();
+    
+    // 🔹 CORRECCIÓN: Usar bind_result en lugar de get_result para compatibilidad sin mysqlnd
+    $stmt_data->store_result();
+    $stmt_data->bind_result($db_nombre, $db_apellido, $db_telefono, $db_modalidad_nombre);
+
+    if ($stmt_data->fetch()) {
+        $nombre_paciente_db = trim($db_nombre . ' ' . $db_apellido);
+        $telefono_paciente_db = $db_telefono;
+        $modalidad_nombre_db = $db_modalidad_nombre;
+
+        // 2. Normalizar el teléfono (igual que en guardar_cita.php)
+        $telefono_wpp = preg_replace('/\D/', '', $telefono_paciente_db);
+        if (strlen($telefono_wpp) === 10) {
+            $telefono_wpp = '52' . $telefono_wpp;
+        }
+
+        log_message("[RESERVA CLIENTE] Enviando WPP a $telefono_wpp para cita $cita_id");
+
+        // 3. Crear URLs para las acciones
+        $url_base = "https://ha.angelescuauhtemoc.com/Agenda/agenda/";
+        $url_confirmar = $url_base . "confirmar_paciente.php?id=" . $cita_id;
+        $url_reprogramar = $url_base . "reprogramar_paciente.php?id=" . $cita_id;
+        $url_cancelar = $url_base . "cancelar_paciente.php?id=" . $cita_id;
+
+        // 4. Llamar a la función con los datos de la BD y las nuevas URLs
+        $resultado_wpp = enviarWhatsAppSilencioso(
+            $telefono_wpp,
+            $nombre_paciente_db,
+            $modalidad_nombre_db,
+            $fecha,
+            substr($hora_inicio, 0, 5),
+            $observaciones ?: 'Sin indicaciones adicionales.',
+            $url_confirmar,
+            $url_reprogramar,
+            $url_cancelar
+        );
+        log_message("[RESERVA CLIENTE] Resultado WPP: " . json_encode($resultado_wpp));
+    } else {
+        log_message("[RESERVA CLIENTE] ERROR: No se pudieron obtener los datos de la cita $cita_id para enviar WPP.");
+    }
+    
+    $stmt_data->close();
+} catch (Throwable $e) {
+    log_message("[RESERVA CLIENTE] Excepción al enviar WPP: " . $e->getMessage());
+}
+
+// =========================
+// RESPUESTA FINAL
+// =========================
+echo json_encode([
+    "success" => true,
+    "message" => "Reserva creada exitosamente. Redirigiendo...",
+    "redirect_url" => "https://ha.angelescuauhtemoc.com/PortaldePacientes/main.php"
+]);
+
+exit;

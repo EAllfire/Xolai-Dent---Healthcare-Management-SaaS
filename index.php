@@ -1396,6 +1396,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                             <span class="leyenda-color" style="background-color: #FF7F50;"></span>
                             <span class="leyenda-texto">No Asistió</span>
                         </div>
+                         <div class="leyenda-item">
+                            <span class="leyenda-color" style="background-color: #797a79ff;"></span>
+                            <span class="leyenda-texto">Cancelada</span>
+                        </div>
                     </div>
                 </div>
             </div> <!-- Cierre de .unified-controls -->
@@ -1718,6 +1722,8 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                   <option value="4">No asistió</option>
                   <option value="5">Pendiente</option>
                   <option value="6">En espera</option>
+                  <option value="7">Cancelada</option>
+
                 </select>
               </div>
             </div>
@@ -2490,7 +2496,8 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             {nombre: 'asistió', color: '#E91E63', label: 'Asistió'},
             {nombre: 'no asistió', color: '#FF7F50', label: 'No asistió'},
             {nombre: 'pendiente', color: '#F44336', label: 'Pendiente'},
-            {nombre: 'en espera', color: '#4CAF50', label: 'En espera'}
+            {nombre: 'en espera', color: '#4CAF50', label: 'En espera'},
+            {nombre: 'cancelada', color: '#797a79ff', label: 'Cancelada'}
           ];
           
           // Crear puntos de estados
@@ -3479,7 +3486,8 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         'asistió': '3',
         'no asistió': '4',
         'pendiente': '5',
-        'en espera': '6'
+        'en espera': '6',
+        'cancelada': '7',
       };
       estadoSelect.value = estadoMap[estado.toLowerCase()] || '1';
       

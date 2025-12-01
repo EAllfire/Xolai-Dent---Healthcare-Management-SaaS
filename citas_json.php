@@ -50,7 +50,8 @@ while ($stmt->fetch()) {
             'asistió' => '#E91E63',      // Rosa
             'no asistió' => '#FF7F50',   // Coral
             'pendiente' => '#F44336',    // Rojo
-            'en espera' => '#4CAF50'     // Verde
+            'en espera' => '#4CAF50',     // Verde
+            'cancelada' => '#797a79ff' //Gris
         ];
         
         $estado_lower = strtolower($current_row['estado']);

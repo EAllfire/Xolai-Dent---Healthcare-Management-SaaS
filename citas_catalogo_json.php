@@ -83,7 +83,8 @@ try {
             'asistió' => '#E91E63',
             'no asistió' => '#FF7F50',
             'pendiente' => '#F44336',
-            'en espera' => '#4CAF50'
+            'en espera' => '#4CAF50',
+            'cancelada' => '#797a79ff'
         ];
         $estado_lower = strtolower($row['estado_nombre'] ?? '');
         $row['estado_color'] = $colores_map[$estado_lower] ?? '#6c757d'; // Gris por defecto

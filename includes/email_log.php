@@ -1,19 +1,22 @@
 <?php
-// Logger exclusivo para email
+// email_log.php – genera logs detallados del correo
 
-if (!function_exists('log_email')) {
+$EMAIL_LOG_DIR = __DIR__ . "/correo_logs/";
 
-    function log_email($message, $level = 'INFO') {
-        $log_file = __DIR__ . '/email_logs.log';
+if (!file_exists($EMAIL_LOG_DIR)) {
+    mkdir($EMAIL_LOG_DIR, 0775, true);
+}
 
-        if (!file_exists($log_file)) {
-            @touch($log_file);
-            @chmod($log_file, 0666);
-        }
+$EMAIL_LOG_FILE = $EMAIL_LOG_DIR . "correo_log.txt";
 
-        $timestamp = date('Y-m-d H:i:s');
-        $line = "[$timestamp] [$level] $message\n";
+function log_email($mensaje) {
+    global $EMAIL_LOG_FILE;
+    $fecha = date("Y-m-d H:i:s");
+    file_put_contents($EMAIL_LOG_FILE, "[$fecha] INFO: $mensaje\n", FILE_APPEND);
+}
 
-        @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
-    }
+function log_email_error($mensaje) {
+    global $EMAIL_LOG_FILE;
+    $fecha = date("Y-m-d H:i:s");
+    file_put_contents($EMAIL_LOG_FILE, "[$fecha] ERROR: $mensaje\n", FILE_APPEND);
 }

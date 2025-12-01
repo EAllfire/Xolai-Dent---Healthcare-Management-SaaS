@@ -1,3 +1,8 @@
+<?php
+session_start();
+// Recuperar datos del paciente desde la sesión, si existen
+$paciente_data = $_SESSION['portal_paciente_data'] ?? null;
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -388,21 +393,21 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="nombre" class="form-label">Nombre Completo *</label>
-                                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                        <input type="text" class="form-control" id="nombre" name="nombre" required value="<?php echo htmlspecialchars($paciente_data['nombre_completo'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label for="telefono" class="form-label">Teléfono *</label>
-                                        <input type="tel" class="form-control" id="telefono" name="telefono" required>
+                                        <input type="tel" class="form-control" id="telefono" name="telefono" required value="<?php echo htmlspecialchars($paciente_data['telefono'] ?? ''); ?>">
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="email" class="form-label">Email *</label>
-                                        <input type="email" class="form-control" id="email" name="email" required>
+                                        <input type="email" class="form-control" id="email" name="email" required value="<?php echo htmlspecialchars($paciente_data['email'] ?? ''); ?>">
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento *</label>
-                                        <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" required>
+                                        <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" required value="<?php echo htmlspecialchars($paciente_data['fecha_nacimiento'] ?? ''); ?>">
                                     </div>
                                 </div>
                             </div>
@@ -491,6 +496,19 @@
             modalidad_nombre: params.get('modalidad_nombre') || ''
         };
     }
+
+    // 🔹 Función para agregar el ID del paciente a los datos que se envían
+function addPatientIdToData(jsonData) {
+    // Obtener portal_usuario_id de la URL si existe
+    const urlParams = new URLSearchParams(window.location.search);
+    const portalUsuarioId = urlParams.get('portal_usuario_id');
+    
+    if (portalUsuarioId) {
+        jsonData.portal_usuario_id = portalUsuarioId;
+    }
+    
+    return jsonData;
+}
 
     // 🔹 Inicializar todo
     document.addEventListener('DOMContentLoaded', function() {
@@ -617,8 +635,13 @@
             const result = await response.json();
 
             if (result.success) {
-                showAlert('success', 'Reserva creada exitosamente.');
-                setTimeout(() => window.location.href = 'cliente.php', 3000);
+                // Usar la URL de redirección que envía el servidor
+                showAlert('success', result.message || 'Reserva creada exitosamente. Redirigiendo...');
+                if (result.redirect_url) {
+                    setTimeout(() => {
+                        window.location.href = result.redirect_url;
+                    }, 2000); // Redirigir después de 2 segundos
+                }
             } else throw new Error(result.error || 'Error desconocido');
         } catch (err) {
             console.error('Error en reserva:', err);
