@@ -56,3 +56,20 @@ function save_debug_to_file($file = 'debug_log.txt') {
     // Append logs to the file with a timestamp
     file_put_contents($path, "\n[" . date('Y-m-d H:i:s') . "]\n" . $log_content . "\n", FILE_APPEND);
 }
+
+/**
+ * Imprime el búfer de depuración en la pantalla si DEBUG_MODE está activado.
+ * Es útil para las respuestas AJAX donde no se puede ver la salida de var_dump directamente.
+ */
+function print_debug_buffer() {
+    if (defined('DEBUG_MODE') && DEBUG_MODE === true && !empty($GLOBALS['debug_buffer'])) {
+        // Obtener el contenido del búfer como una cadena
+        $log_content = get_debug_buffer_as_string();
+        
+        // Imprimirlo en un formato que no interfiera con el JSON si se muestra
+        // Se usa un <textarea> para contener todo el texto de depuración.
+        echo "\n<textarea style='width:100%; height:150px; background-color:#111; color:#0f0; border:1px solid #333; font-family:monospace; font-size:12px; margin-top:20px;'>";
+        echo $log_content;
+        echo "</textarea>";
+    }
+}

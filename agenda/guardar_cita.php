@@ -38,6 +38,64 @@ if (!$fecha || !$hora_inicio || !$hora_fin || !$paciente_id || !$modalidad_id ||
     exit;
 }
 
+// --- INICIO: VERIFICACIÓN DE DISPONIBILIDAD ---
+// Se verifica que no haya ninguna otra cita (que no esté cancelada, estado_id != 7)
+// que se solape con el horario solicitado en la misma modalidad.
+$stmt_empalme = $conn->prepare(
+    "SELECT COUNT(*) as total FROM agenda_citas 
+     WHERE fecha = ? AND modalidad_id = ? AND estado_id != 7 AND id != ? AND hora_inicio < ? AND hora_fin > ?"
+);
+
+if ($stmt_empalme) {
+    $cita_id_a_ignorar = 0; // Para nuevas citas, no se ignora ninguna.
+    $stmt_empalme->bind_param("siiss", $fecha, $modalidad_id, $cita_id_a_ignorar, $hora_fin, $hora_inicio);
+    $stmt_empalme->execute();
+    $stmt_empalme->bind_result($total_empalme);
+    $stmt_empalme->fetch();
+    $stmt_empalme->close();
+
+    if ($total_empalme > 0) {
+        echo json_encode([
+            "success" => false,
+            "error" => "Conflicto de horario. Ya existe una cita o un bloqueo en ese espacio para la modalidad seleccionada."
+        ]);
+        exit;
+    }
+} else {
+    // No se pudo preparar la consulta, por seguridad, no se procede.
+    echo json_encode(["success" => false, "error" => "Error al verificar la disponibilidad del horario."]);
+    exit;
+}
+// --- FIN: VERIFICACIÓN DE DISPONIBILIDAD ---
+
+// --- INICIO: Lógica de Edad para Notificación (MOVIMOS ESTE BLOQUE ANTES DEL INSERT) ---
+// Obtener la fecha de nacimiento del paciente para calcular la edad
+$fecha_nacimiento_paciente = null;
+if ($paciente_id > 0) {
+    $stmt_fn = $conn->prepare("SELECT fecha_nacimiento FROM portal_pacientes WHERE id = ?");
+    $stmt_fn->bind_param("i", $paciente_id);
+    $stmt_fn->execute();
+    $stmt_fn->bind_result($fecha_nacimiento_paciente);
+    $stmt_fn->fetch();
+    $stmt_fn->close();
+
+    if ($fecha_nacimiento_paciente) {
+        try {
+            $fecha_nac = new DateTime($fecha_nacimiento_paciente);
+            $hoy = new DateTime();
+            $edad = $hoy->diff($fecha_nac)->y;
+
+            if ($edad < 18) {
+                // Si es menor de edad, añadir la nota para el tutor
+                $nota_paciente = ($nota_paciente ? $nota_paciente . " " : "") . "Favor de presentarse acompañado de su tutor legal.";
+            }
+        } catch (Exception $e) {
+            log_message("[GUARDAR CITA] Error al calcular la edad para la cita: " . $e->getMessage());
+        }
+    }
+}
+// --- FIN: Lógica de Edad para Notificación ---
+
 // preparar INSERT (ajusta tipos si tu DB los requiere)
 $sql = "INSERT INTO agenda_citas (fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, tipo, token, nota_interna, nota_paciente, url_identificacion, url_orden_medica) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 $stmt = $conn->prepare($sql);
@@ -122,9 +180,7 @@ try {
 } catch (Throwable $e) {
     log_message("[GUARDAR] Excepción WPP: " . $e->getMessage());
 }
-    
 
-// 🔵 **ENVÍO DE EMAIL CORRECTO – BLOQUE FINAL**
 // 🔵 **ENVÍO DE EMAIL CORRECTO – BLOQUE FINAL**
 
 if (!empty($email_paciente) && filter_var($email_paciente, FILTER_VALIDATE_EMAIL)) {

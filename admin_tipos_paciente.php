@@ -181,7 +181,7 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             $('#tipos-table').hide();
             
             fetch('tipos_paciente_json.php')
-                .then(response => response.json())
+                .then(response => { if (!response.ok) { throw new Error('Error en la red: ' + response.statusText); } return response.json(); })
                 .then(data => {
                     const tbody = $('#tipos-tbody');
                     tbody.empty();
@@ -189,6 +189,10 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                     $('#tipos-table').show();
                     
                     data.forEach(tipo => {
+                        // Asegurarse de que los valores numéricos sean tratados como números
+                        tipo.id = parseInt(tipo.id, 10);
+                        tipo.limite_citas_diarias = parseInt(tipo.limite_citas_diarias, 10);
+
                         const limiteTexto = tipo.limite_citas_diarias >= 10000 ? '<span class="badge badge-success">Infinitas</span>' : tipo.limite_citas_diarias;
                         const tr = `
                             <tr>

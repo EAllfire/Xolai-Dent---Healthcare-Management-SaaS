@@ -451,7 +451,7 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
                                     <i class="fas fa-notes-medical"></i> Información Adicional
                                 </div>
                                 <div class="mb-3">
-                                    <label for="observaciones" class="form-label">Comentarios o Observaciones</label>
+                                    <label for="observaciones" class="form-label">Comentarios u Observaciones</label>
                                     <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
                                 </div>
                                 <div class="form-check">
@@ -538,7 +538,6 @@ function addPatientIdToData(jsonData) {
             minDate: "today",
             maxDate: new Date().fp_incr(60),
             dateFormat: "Y-m-d",
-            disable: [date => date.getDay() === 0],
             onChange: (selectedDates, dateStr) => { if (dateStr) loadAvailableSlots(dateStr); }
         });
     }
@@ -547,34 +546,43 @@ function addPatientIdToData(jsonData) {
     async function loadAvailableSlots(fecha) {
         const cont = document.getElementById('timeSlots');
         cont.innerHTML = '<p class="text-muted">Cargando horarios disponibles...</p>';
+        document.getElementById('hora_seleccionada').value = ''; // Limpiar selección previa
 
-        // Obtener los horarios ya reservados desde el backend
-        let horariosOcupados = [];
+        let availableSlots = [];
         try {
-            const response = await fetch(`horarios_disponibles.php?fecha=${fecha}&modalidad_id=${reservationData.modalidad_id}`);
+            // Se añade servicio_id a la petición para calcular la duración
+            const response = await fetch(`horarios_disponibles.php?fecha=${fecha}&modalidad_id=${reservationData.modalidad_id}&servicio_id=${reservationData.servicio_id}`);
             if (!response.ok) {
-                throw new Error('No se pudo conectar con el servidor de horarios.');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'No se pudo conectar con el servidor de horarios.');
             }
-            horariosOcupados = await response.json();
+            availableSlots = await response.json();
+
+            if (availableSlots.error) {
+                throw new Error(availableSlots.error);
+            }
+
         } catch (error) {
             console.error("Error al cargar horarios:", error);
-            cont.innerHTML = '<p class="text-danger">No se pudieron cargar los horarios. Intente de nuevo.</p>';
+            cont.innerHTML = `<p class="text-danger">${error.message}</p>`;
             return;
         }
 
-        cont.innerHTML = ''; // Limpiar el contenedor antes de agregar los nuevos horarios
-        for (let h = 8; h < 18; h++) {
-            const time = `${h.toString().padStart(2, '0')}:00`;
-            const isUnavailable = horariosOcupados.includes(time);
+        cont.innerHTML = ''; // Limpiar el contenedor
 
-            const div = document.createElement('div');
-            div.className = `time-slot ${isUnavailable ? 'unavailable' : ''}`;
-            div.textContent = time;
-            if (!isUnavailable) {
-                div.onclick = () => selectTimeSlot(time, div);
-            }
-            cont.appendChild(div);
+        if (availableSlots.length === 0) {
+            cont.innerHTML = '<p class="text-muted">No hay horarios disponibles para esta fecha.</p>';
+            return;
         }
+        
+        // El backend ahora devuelve los horarios disponibles, simplemente los renderizamos
+        availableSlots.forEach(time => {
+            const div = document.createElement('div');
+            div.className = 'time-slot';
+            div.textContent = time;
+            div.onclick = () => selectTimeSlot(time, div);
+            cont.appendChild(div);
+        });
     }
 
     function selectTimeSlot(time, el) {

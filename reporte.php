@@ -53,17 +53,18 @@ if (!empty($action)) {
 
         if ($action === 'reservas_today') {
             $modalidad = $_GET['modalidad'] ?? 'all';
-            $sql = "SELECT c.hora_inicio, c.hora_fin, p.nombre, p.telefono, p.alergias as diagnostico, p.tipo, p.origen, c.nota_paciente, s.nombre as servicio, ec.nombre as estado
+            $sql = "SELECT c.hora_inicio, c.hora_fin, p.nombre, p.telefono, p.alergias as diagnostico, atp.nombre as tipo_paciente, p.origen, c.nota_paciente, s.nombre as servicio, ec.nombre as estado, ec.hex_color
                     FROM agenda_citas c
                     LEFT JOIN portal_pacientes p ON c.paciente_id = p.id
                     LEFT JOIN portal_servicios s ON c.servicio_id = s.id
                     LEFT JOIN agenda_estado_cita ec ON c.estado_id = ec.id
-                    WHERE c.fecha = CURDATE()";
+                    LEFT JOIN agenda_tipos_paciente atp ON p.tipo_id = atp.id
+                    WHERE c.fecha = CURDATE() AND c.estado_id != 9";
             
             $params = [];
             $types = '';
 
-            if ($modalidad !== 'all' && is_numeric($modalidad)) {
+            if ($modalidad !== 'all' && !empty($modalidad) && is_numeric($modalidad)) {
                 $sql .= " AND c.modalidad_id = ?";
                 $params[] = $modalidad;
                 $types .= 'i';
@@ -288,10 +289,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         // carga de modalidades para filtro
         fetch('citas/modalidades_json.php').then(parseJsonOrError).then(data=>{
             var sel = document.getElementById('modalidadFiltro');
-            sel.innerHTML = '<option value="all">Todas</option>';
+            sel.innerHTML = '<option value="all" selected>Todas las modalidades</option>';
             data.forEach(function(m){
                 var o = document.createElement('option'); o.value = m.id; o.textContent = m.title || m.nombre || m.name || m.id; sel.appendChild(o);
             });
+            // Una vez cargadas las modalidades, ahora sí cargamos el detalle de hoy.
+            loadDetalleHoy();
         }).catch(function(err){ console.warn('modalidades load error:', err); var sel=document.getElementById('modalidadFiltro'); sel.innerHTML='<option value="all">Todas</option>'; });
 
         function loadDetalleHoy() {
@@ -307,12 +310,16 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                         }
                         j.data.forEach(function(row){
                             var div = document.createElement('div');
-                            div.style.padding='8px'; 
-                            div.style.borderBottom='1px solid #eee';
+                            // Añadimos una barra de color a la izquierda
+                            div.style.cssText = 'padding: 8px 8px 8px 16px; border-bottom: 1px solid #eee; position: relative;';
+                            
+                            var colorBar = document.createElement('div');
+                            colorBar.style.cssText = `position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background-color: ${row.hex_color || '#ccc'}; border-radius: 3px 0 0 3px;`;
+                            div.appendChild(colorBar);
 
                             div.innerHTML = '<strong>'+row.hora_inicio+' - '+row.hora_fin+'</strong> <br>' +
-                                            '<strong>'+row.nombre+'</strong> ('+(row.telefono || 'N/A')+')<br>' +
-                                            (row.diagnostico || 'N/A') + ' - ' + (row.tipo || 'N/A') + ' - ' + (row.origen || 'N/A') + '<br>' +
+                                            '<strong>'+(row.nombre || 'N/A')+'</strong> ('+(row.telefono || 'N/A')+')<br>' +
+                                            (row.diagnostico || 'N/A') + ' - ' + (row.tipo_paciente || 'N/A') + ' - ' + (row.origen || 'N/A') + '<br>' +
                                             '<em>'+(row.servicio || 'N/A')+'</em> <span style="float:right">'+(row.estado || 'N/A')+'</span>';
                             out.appendChild(div);
                         });
@@ -320,7 +327,6 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                 }).catch(function(err){ console.warn('reservas_today error:', err); document.getElementById('detalleHoy').innerHTML='<div class="alert alert-danger">'+(err.message||'Error')+'</div>'; });
         }
         document.getElementById('modalidadFiltro').addEventListener('change', loadDetalleHoy);
-        loadDetalleHoy();
 
         // Charts: placeholder data
         var ocupCtx = document.getElementById('ocupacionChart').getContext('2d');

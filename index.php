@@ -1096,6 +1096,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             color: #1275a0;
         }
         
+        .context-menu button:disabled {
+            color: #9ca3af;
+            cursor: not-allowed;
+            background: #f9fafb;
+        }
+        
         .context-menu button:first-child {
             border-radius: 12px 12px 0 0;
         }
@@ -1242,6 +1248,16 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             outline: none;
             border-color: #1275a0;
             box-shadow: 0 0 0 3px rgba(18, 117, 160, 0.1);
+        }
+
+        /* Animación para el spinner de carga */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinner-icon {
+            display: inline-block;
+            animation: spin 1s linear infinite;
         }
     </style>
 </head>
@@ -1412,10 +1428,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             <div id="calendar"></div>
         </div>
     </div>
-  <div id="contextMenu" class="context-menu">
-    <button id="bloquearBtn">Bloquear</button>
-    <button id="agendarBtn">Agendar</button>
-  </div>
+
   <!-- Modal para agendar cita -->
   <!-- Modal mejorado para agendar cita -->
   <div id="modalAgendar" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:10000;align-items:flex-start;justify-content:center;overflow-y:auto;padding-top:5vh;">
@@ -1510,12 +1523,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                 <div>
                   <label style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Tipo:</label>
                   <select id="nuevoPacienteTipo" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
-                    <option value="niño">Niño</option>
-                    <option value="adulto" selected>Adulto</option>
-                    <option value="IMSS">IMSS</option>
-                    <option value="urgencias">Urgencias</option>
-                    <option value="externo">Externo</option>
-                    <option value="interno">Interno</option>
+                    <option value="" disabled selected>Seleccionar tipo</option>
                   </select>
                 </div>
                 <div>
@@ -1527,6 +1535,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                     <option value="interno">Interno</option>
                   </select>
                 </div>
+              </div>
+
+              <div style="margin-bottom:16px;">
+                <label style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Fecha de Nacimiento:</label>
+                <input type="date" id="nuevoPacienteFechaNacimiento" 
+                       style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
               </div>
 
               <div style="margin-bottom:16px;">
@@ -1640,9 +1654,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                 Cancelar
               </button>
               <button type="submit" 
+                      id="btnGuardarCita"
                       style="background:#1275a0;color:#fff;padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">
                 <i class="fas fa-calendar-check" style="margin-right:6px;"></i>
-                Guardar Cita
+                <span>Guardar Cita</span>
               </button>
             </div>
           </div>
@@ -1750,6 +1765,51 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       </div>
     </div>
   </div>
+
+  <!-- Modal para Bloquear Espacio -->
+  <div id="modalBloquear" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:10000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:12px;max-width:500px;width:95%;margin:20px;position:relative;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+      <div style="background: #6c757d;color:white;padding:20px 32px;border-radius:12px 12px 0 0;position:relative;">
+        <h3 style="margin:0;font-size:24px;font-weight:600;">
+          <i class="fas fa-lock" style="margin-right:10px;"></i>
+          Bloquear Espacio
+        </h3>
+        <button id="cerrarModalBloquear" style="position:absolute;top:15px;right:20px;font-size:24px;background:none;border:none;cursor:pointer;color:white;opacity:0.8;padding:5px;">&times;</button>
+      </div>
+      <form id="formBloquear" style="padding:24px 32px;">
+        <input type="hidden" id="bloquearModalidadId" name="modalidad_id">
+        <div style="margin-bottom: 16px;">
+            <label for="bloquearFecha" style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Fecha:</label>
+            <input type="date" id="bloquearFecha" name="fecha" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div>
+                <label for="bloquearHoraInicio" style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Hora inicio:</label>
+                <input type="time" id="bloquearHoraInicio" name="hora_inicio" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+            </div>
+            <div>
+                <label for="bloquearHoraFin" style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Hora fin:</label>
+                <input type="time" id="bloquearHoraFin" name="hora_fin" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+            </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <label for="bloquearMotivo" style="display:block;margin-bottom:6px;font-weight:500;color:#374151;">Motivo:</label>
+            <textarea id="bloquearMotivo" name="motivo" rows="3" placeholder="E.g., Mantenimiento, tiempo personal, etc." style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;resize:vertical;"></textarea>
+        </div>
+        <div style="padding-top:12px;display:flex;gap:12px;justify-content:end;">
+          <button type="button" onclick="document.getElementById('modalBloquear').style.display='none';" style="background:#6b7280;color:#fff;padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">Cancelar</button>
+          <button type="submit" id="btnConfirmarBloqueo" style="background:#1275a0;color:#fff;padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">Confirmar Bloqueo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Menú contextual para agendar o bloquear -->
+  <div id="contextMenu" class="context-menu">
+    <button id="ctxAgendarBtn"><i class="fas fa-calendar-plus"></i> Agendar Cita</button>
+    <button id="ctxBloquearBtn"><i class="fas fa-lock"></i> Bloquear Espacio</button>
+  </div>
+
   
   <!-- JS -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -1795,7 +1855,32 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       });
     }
 
+
+    // Función para cargar los tipos de paciente dinámicamente
+    async function cargarTiposDePaciente() {
+        try {
+            const response = await fetch('tipos_paciente_json.php');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const tipos = await response.json();
+            const select = document.getElementById('nuevoPacienteTipo');
+            select.innerHTML = '<option value="">Seleccione un tipo</option>'; // Opción por defecto
+            tipos.forEach(tipo => {
+                const option = document.createElement('option');
+                option.value = tipo.id;
+                option.textContent = tipo.nombre;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error("Error al cargar tipos de paciente:", error);
+            const select = document.getElementById('nuevoPacienteTipo');
+            select.innerHTML = '<option value="">Error al cargar</option>';
+        }
+    }
+
     // Paciente autocompletar y registro
+
     let pacienteInput = document.getElementById('agendarPaciente');
     let pacientesDropdown = document.getElementById('pacientesDropdown');
     let registroPacienteBox = document.getElementById('registroPacienteBox');
@@ -1822,7 +1907,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             return;
         }
         try {
-            const response = await fetch(`pacientes_json.php?term=${encodeURIComponent(term)}`);
+            const response = await fetch(`citas/pacientes_json.php?term=${encodeURIComponent(term)}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -1869,9 +1954,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         document.getElementById('nuevoPacienteTelefono').value = paciente.telefono || '';
         document.getElementById('nuevoPacienteCorreo').value = paciente.correo || '';
         document.getElementById('nuevoPacienteDiagnostico').value = paciente.diagnostico || '';
-        document.getElementById('nuevoPacienteTipo').value = paciente.tipo || 'adulto';
+        document.getElementById('nuevoPacienteTipo').value = paciente.estado_id || '';
         document.getElementById('nuevoPacienteOrigen').value = paciente.origen || 'externo';
         document.getElementById('nuevoPacienteComentarios').value = paciente.comentarios || '';
+        document.getElementById('nuevoPacienteFechaNacimiento').value = paciente.fecha_nacimiento || '';
 
         // Cambiar a modo edición
         editingPacienteId = paciente.id;
@@ -1888,9 +1974,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         document.getElementById('nuevoPacienteTelefono').value = '';
         document.getElementById('nuevoPacienteCorreo').value = '';
         document.getElementById('nuevoPacienteDiagnostico').value = '';
-        document.getElementById('nuevoPacienteTipo').value = 'adulto';
+        document.getElementById('nuevoPacienteTipo').value = '';
         document.getElementById('nuevoPacienteOrigen').value = 'externo';
         document.getElementById('nuevoPacienteComentarios').value = '';
+        document.getElementById('nuevoPacienteFechaNacimiento').value = '';
 
         // Cambiar a modo registro
         editingPacienteId = null;
@@ -1920,6 +2007,13 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
 
     // Botón para Guardar (nuevo) o Actualizar (existente) un paciente
     btnGuardarPaciente.onclick = async function() {
+        // --- INICIO: Lógica de botón de carga ---
+        const originalBtnContent = this.innerHTML;
+        const actionText = editingPacienteId ? 'Actualizando...' : 'Guardando...';
+        this.disabled = true;
+        this.innerHTML = `<i class="fas fa-spinner spinner-icon" style="margin-right:6px;"></i> <span>${actionText}</span>`;
+        // --- FIN: Lógica de botón de carga ---
+
         const pacienteData = {
             id: editingPacienteId, // Será null si es un nuevo paciente
             nombre: document.getElementById('nuevoPacienteNombre').value.trim(),
@@ -1927,17 +2021,21 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             telefono: document.getElementById('nuevoPacienteTelefono').value.trim(),
             correo: document.getElementById('nuevoPacienteCorreo').value.trim(),
             diagnostico: document.getElementById('nuevoPacienteDiagnostico').value.trim(),
-            tipo: document.getElementById('nuevoPacienteTipo').value,
+            estado_id: document.getElementById('nuevoPacienteTipo').value,
             origen: document.getElementById('nuevoPacienteOrigen').value,
             comentarios: document.getElementById('nuevoPacienteComentarios').value.trim(),
+            fecha_nacimiento: document.getElementById('nuevoPacienteFechaNacimiento').value.trim()
         };
 
         if (!pacienteData.nombre || !pacienteData.apellido) {
             alert('Por favor ingresa nombre y apellido del paciente.');
+            // Restaurar botón en caso de validación fallida
+            this.disabled = false;
+            this.innerHTML = originalBtnContent;
             return;
         }
 
-        const url = editingPacienteId ? 'actualizar_paciente.php' : 'guardar_paciente.php';
+        const url = editingPacienteId ? 'citas/actualizar_paciente.php' : 'citas/guardar_paciente.php';
         const method = 'POST';
 
         try {
@@ -1981,9 +2079,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                     telefono: pacienteData.telefono,
                     correo: pacienteData.correo,
                     diagnostico: pacienteData.diagnostico,
-                    tipo: pacienteData.tipo,
+                    estado_id: pacienteData.estado_id,
                     origen: pacienteData.origen,
-                    comentarios: pacienteData.comentarios
+                    comentarios: pacienteData.comentarios,
+                    fecha_nacimiento: pacienteData.fecha_nacimiento
                 };
                 
                 // Re-populate the form with the correct, full data
@@ -1994,10 +2093,16 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
 
             } else {
                 alert(`Error al ${editingPacienteId ? 'actualizar' : 'guardar'} paciente: ${resp.error || 'Error desconocido'}`);
+                // Restaurar botón en caso de error de la API
+                this.disabled = false;
+                this.innerHTML = originalBtnContent;
             }
         } catch (error) {
             console.error('Error en la operación de paciente:', error);
             alert('Hubo un error de conexión.');
+            // Restaurar botón en caso de error de conexión/fetch
+            this.disabled = false;
+            this.innerHTML = originalBtnContent;
         }
     };
 
@@ -2064,14 +2169,15 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       
       if (!modalidadId || isNaN(modalidadId) || modalidadId <= 0) return;
       
-      fetch('servicios_con_duracion.php?modalidad_id=' + modalidadId)
+      fetch('citas/servicios_por_modalidad.php?modalidad_id=' + modalidadId)
         .then(r => r.json())
         .then(data => {
           data.forEach(function(servicio) {
             var opt = document.createElement('option');
             opt.value = servicio.id;
             opt.textContent = servicio.nombre;
-            opt.setAttribute('data-duracion', servicio.duracion_minutos);
+            opt.setAttribute('data-notas', servicio.notas || ''); // Guardar las notas del servicio
+            opt.setAttribute('data-duracion', servicio.duracion_minutos || 30); // Añadido para asegurar que la duración se guarde
             servicioSelect.appendChild(opt);
           });
           
@@ -2082,11 +2188,26 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         });
     }
 
-    function manejarCambioServicio() {
+    // Función para manejar el cambio de servicio y actualizar duración y notas
+    function manejarCambioServicio() { // MODIFICADO
       var servicioSelect = document.getElementById('agendarServicio');
       var selectedOption = servicioSelect.options[servicioSelect.selectedIndex];
       var duracion = selectedOption.getAttribute('data-duracion');
       var tiempoManual = document.getElementById('tiempoManual');
+      var servicioId = selectedOption.value; // Obtener el ID del servicio
+
+      // --- INICIO: Lógica para cargar notas del servicio ---
+      // Se hace un fetch al endpoint que devuelve las notas para el servicio seleccionado.
+      var notaPacienteTextarea = document.getElementById('notaPaciente');
+      if (servicioId && notaPacienteTextarea) {
+        fetch(`citas/servicio_notas.php?id=${servicioId}`)
+          .then(response => response.json())
+          .then(data => {
+            // Actualiza el textarea con las notas del servicio, o lo deja vacío si no hay.
+            notaPacienteTextarea.value = data.notas || '';
+          });
+      }
+      // --- FIN: Lógica para cargar notas del servicio ---
       
       if (duracion && !tiempoManual.checked) {
         var horaInicioInput = document.getElementById('agendarHoraInicio');
@@ -2118,7 +2239,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-      var calendar; // Declarar la variable aquí para que sea accesible en todo el script
+      // La variable 'calendar' se declara fuera para ser global
 
       // --- Lógica para el Resizer de la barra lateral ---
       const sidebar = document.querySelector('.sidebar');
@@ -2305,6 +2426,80 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
       });
 
+      // --- Lógica del Menú Contextual ---
+      var contextMenu = document.getElementById('contextMenu');
+      var lastSelectionInfo = null;
+
+      // Agendar desde el menú contextual
+      document.getElementById('ctxAgendarBtn').addEventListener('click', function() {
+          if (lastSelectionInfo) {
+              abrirModalAgendar(lastSelectionInfo);
+          }
+          contextMenu.style.display = 'none';
+      });
+
+      // Bloquear desde el menú contextual
+      document.getElementById('ctxBloquearBtn').addEventListener('click', function() {
+        if (lastSelectionInfo) {
+            abrirModalBloquear(lastSelectionInfo);
+        }
+        contextMenu.style.display = 'none';
+      });
+
+      // --- Lógica del Modal de Bloqueo ---
+      function abrirModalBloquear(info) {
+          document.getElementById('bloquearFecha').value = info.start.toISOString().split('T')[0];
+          document.getElementById('bloquearHoraInicio').value = info.start.toTimeString().substring(0, 5);
+          document.getElementById('bloquearHoraFin').value = info.end.toTimeString().substring(0, 5);
+          document.getElementById('bloquearModalidadId').value = info.resource.id;
+          document.getElementById('modalBloquear').style.display = 'flex';
+      }
+
+      document.getElementById('cerrarModalBloquear').onclick = function() {
+          document.getElementById('modalBloquear').style.display = 'none';
+      };
+
+      document.getElementById('formBloquear').onsubmit = function(e) {
+          e.preventDefault();
+          const btn = document.getElementById('btnConfirmarBloqueo');
+          const originalContent = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = `<i class="fas fa-spinner spinner-icon"></i> <span>Bloqueando...</span>`;
+
+          const formData = new FormData(this);
+          const data = Object.fromEntries(formData.entries());
+
+          fetch('bloquear_espacio.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data)
+          })
+          .then(response => response.json())
+          .then(result => {
+              if (result.success) {
+                  alert('Espacio bloqueado correctamente.');
+                  document.getElementById('modalBloquear').style.display = 'none';
+                  calendar.refetchEvents();
+              } else {
+                  alert('Error al bloquear el espacio: ' + (result.error || 'Error desconocido.'));
+              }
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              alert('Error de conexión al intentar bloquear el espacio.');
+          })
+          .finally(() => {
+              btn.disabled = false;
+              btn.innerHTML = originalContent;
+          });
+      };
+
+
+
+
+
+
+
       var calendarEl = document.getElementById('calendar');
       var contextMenu = document.getElementById('contextMenu');
       var bloquearBtn = document.getElementById('bloquearBtn');
@@ -2435,40 +2630,68 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         });
       }
 
-      var calendar = new FullCalendar.Calendar(calendarEl, {
+      window.calendar = new FullCalendar.Calendar(calendarEl, {
         eventDidMount: function(info) {
-
-          
-          // Asegurar que el evento sea clickeable
-          
-          // PRIORIDAD: Event listener para clic (editar cita) - SIMPLIFICADO
-          info.el.addEventListener('click', function(e) {
-
-            
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            
-            // Cerrar tooltip si existe
-            if (info.el._fcTooltip && tooltipActivo === info.el._fcTooltip) {
-              document.body.removeChild(info.el._fcTooltip);
-              info.el._fcTooltip = null;
-              tooltipActivo = null;
-            }
-            
-            // Cerrar menú contextual
-            var contextMenu = document.getElementById('context-menu');
-            if (contextMenu) {
-              contextMenu.style.display = 'none';
-            }
-            
-
-            // Abrir modal de editar
-            abrirModalEditarCita(info.event);
-            return false;
-          });
-          
           var event = info.event;
+          var props = event.extendedProps;
+          
+          // --- INICIO: Lógica diferenciada para bloqueos y citas ---
+
+          // LÓGICA PARA EVENTOS BLOQUEADOS (estado_id == 9)
+          if (props && (props.estado_id == 9 || props.estado === 'Bloqueado')) {
+            // 1. Tooltip simple que solo muestra el motivo
+            var motivo = event.title || 'Bloqueado';
+            
+            // Usaremos un tooltip personalizado simple para mantener la consistencia
+            info.el.addEventListener('mouseenter', function(e) {
+                if (tooltipActivo) return; // No mostrar si ya hay uno
+                let tip = document.createElement('div');
+                tip.className = 'fc-custom-tooltip';
+                tip.textContent = motivo;
+                document.body.appendChild(tip);
+                tip.style.left = (e.clientX + 10) + 'px';
+                tip.style.top = (e.clientY + 10) + 'px';
+                tooltipActivo = tip;
+
+                info.el.addEventListener('mouseleave', function() {
+                    if (tooltipActivo) {
+                        document.body.removeChild(tooltipActivo);
+                        tooltipActivo = null;
+                    }
+                }, { once: true });
+            });
+
+            // 2. Al hacer clic, preguntar para eliminar el bloqueo
+            info.el.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (confirm('¿Desea eliminar este bloqueo?\nMotivo: ' + motivo)) {
+                    fetch(`eliminar_cita.php?cita_id=${event.id}`, { method: 'GET' })
+                        .then(r => r.json())
+                        .then(resp => {
+                            if (resp.success) {
+                                alert('Bloqueo eliminado correctamente.');
+                                calendar.refetchEvents();
+                            } else {
+                                alert('Error al eliminar el bloqueo: ' + (resp.error || 'Desconocido'));
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Error al eliminar bloqueo:', err);
+                            alert('Error de conexión al eliminar el bloqueo.');
+                        });
+                }
+            });
+
+            // 3. Detener la ejecución para que no se aplique la lógica de citas normales
+            return;
+          }
+
+          // --- FIN LÓGICA PARA EVENTOS BLOQUEADOS ---
+
+
+          // --- INICIO LÓGICA PARA CITAS NORMALES (código original) ---
           
           // Asegurar que el color se aplique correctamente
           if (event.color) {
@@ -2487,20 +2710,18 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           var diagnostico = event.extendedProps.diagnostico || '';
           var pago = event.extendedProps.pago || 'No pagado';
           var estadoActual = event.extendedProps.estado || '';
-          var tipoPaciente = event.extendedProps.tipo_paciente || ''; // Added patient type
+          var tipoPaciente = event.extendedProps.tipo_paciente || '';
           
-          // Definir todos los estados y sus colores
           var todosLosEstados = [
             {nombre: 'reservado', color: '#2196F3', label: 'Reservado'},
             {nombre: 'confirmado', color: '#FF9800', label: 'Confirmado'},
             {nombre: 'asistió', color: '#E91E63', label: 'Asistió'},
-            {nombre: 'no asistió', color: '#FF7F50', label: 'No asistió'},
+            {nombre: 'no asistió', color: '#FF7F50', label: 'No Asistió'},
             {nombre: 'pendiente', color: '#F44336', label: 'Pendiente'},
-            {nombre: 'en espera', color: '#4CAF50', label: 'En espera'},
+            {nombre: 'en espera', color: '#4CAF50', label: 'En Espera'},
             {nombre: 'cancelada', color: '#797a79ff', label: 'Cancelada'}
           ];
           
-          // Crear puntos de estados
           var estadoPuntos = todosLosEstados.map(estado => {
             var esActual = estadoActual.toLowerCase() === estado.nombre;
             var claseEstado = esActual ? 'activo' : 'clickeable';
@@ -2533,46 +2754,25 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           `;
           info.el.setAttribute('title', '');
           info.el.addEventListener('mouseenter', function(e) {
-            // Si ya hay un tooltip activo, no crear otro
-            if (tooltipActivo) {
-              return;
-            }
-            
-            // Limpiar cualquier timeout pendiente
-            if (info.el._hideTimeout) {
-              clearTimeout(info.el._hideTimeout);
-              info.el._hideTimeout = null;
-            }
+            if (tooltipActivo) return;
+            if (info.el._hideTimeout) clearTimeout(info.el._hideTimeout);
             
             let tip = document.createElement('div');
             tip.className = 'fc-custom-tooltip';
             tip.innerHTML = tooltip;
             tip.style.cssText = `
-              position: absolute;
-              z-index: 99999;
-              background: white;
-              border: 1px solid #d1d5db;
-              box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-              padding: 16px;
-              border-radius: 12px;
-              font-size: 14px;
-              pointer-events: auto;
-              max-width: 300px;
-              font-family: Inter, sans-serif;
+              position: absolute; z-index: 99999; background: white; border: 1px solid #d1d5db;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.15); padding: 16px; border-radius: 12px;
+              font-size: 14px; pointer-events: auto; max-width: 300px; font-family: Inter, sans-serif;
             `;
             tip.style.top = (e.clientY + 15) + 'px';
             tip.style.left = (e.clientX + 15) + 'px';
-            tip.id = 'fc-tooltip-'+event.id;
             document.body.appendChild(tip);
             info.el._fcTooltip = tip;
-            tooltipActivo = tip; // Marcar como tooltip activo
+            tooltipActivo = tip;
             
-            // Prevenir que el tooltip desaparezca al hacer hover sobre él
             tip.addEventListener('mouseenter', function() {
-              if (info.el._hideTimeout) {
-                clearTimeout(info.el._hideTimeout);
-                info.el._hideTimeout = null;
-              }
+              if (info.el._hideTimeout) clearTimeout(info.el._hideTimeout);
             });
             
             tip.addEventListener('mouseleave', function() {
@@ -2585,24 +2785,22 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
               }, 300);
             });
             
-            // Agregar event listeners para los clicks en los puntos de estado
             tip.addEventListener('click', function(e) {
               if (e.target.classList.contains('estado-punto') && e.target.classList.contains('clickeable')) {
                 var nuevoEstado = e.target.getAttribute('data-estado');
                 var citaId = e.target.getAttribute('data-cita-id');
-                
-                if (nuevoEstado && citaId) {
-                  cambiarEstadoCita(citaId, nuevoEstado, event, info.el);
-                }
+                if (nuevoEstado && citaId) cambiarEstadoCita(citaId, nuevoEstado, event, info.el);
               }
             });
           });
+
           info.el.addEventListener('mousemove', function(e) {
             if (info.el._fcTooltip) {
               info.el._fcTooltip.style.top = (e.clientY + 12) + 'px';
               info.el._fcTooltip.style.left = (e.clientX + 12) + 'px';
             }
           });
+
           info.el.addEventListener('mouseleave', function() {
             info.el._hideTimeout = setTimeout(function() {
               if (info.el._fcTooltip && tooltipActivo === info.el._fcTooltip) {
@@ -2612,6 +2810,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
               }
             }, 300);
           });
+          // --- FIN LÓGICA CITAS NORMALES ---
         },
         schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
         initialView: 'resourceTimeGridDay',
@@ -2627,7 +2826,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
               failureCallback(err);
             });
         },
-        events: 'citas_json.php',
+        events: 'citas/citas_json.php',
         
         // Configuración de recursos para evitar solapamiento de nombres
         resourceAreaWidth: window.innerWidth <= 768 ? '180px' : (window.innerWidth <= 480 ? '140px' : '250px'),
@@ -2709,14 +2908,33 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
   // Make the label interval match the slot duration by default and show minutes
   slotLabelInterval: '00:30:00',
   slotLabelFormat: { hour: '2-digit', minute: '2-digit' },
-        allDaySlot: false, // Quitar la fila de All Day
-        nowIndicator: true, // Mostrar línea de tiempo actual
-        height: 'auto', // Cambiado de "100vh" a 'auto' para un mejor manejo de altura
-  selectable: true, // Allow selecting multiple contiguous slots for bookings
-        // select: function(info) {
-        select: function(selectionInfo) {
-          abrirModalAgendar(selectionInfo);
-        },
+  allDaySlot: false,
+  nowIndicator: true,
+  height: 'auto',
+  selectable: true,
+  select: function(info) {
+    // Usar un timeout para asegurar que el menú contextual aparezca consistentemente,
+    // evitando conflictos con otros eventos de clic que podrían cerrarlo prematuramente.
+    setTimeout(function() {
+      lastSelectionInfo = info;
+      
+      // Determinar si se han seleccionado múltiples recursos (columnas).
+      // Cuando se seleccionan slots en múltiples recursos, `info.resource` es `undefined`.
+      const multipleColumnsSelected = !info.resource;
+      
+      // Habilitar/deshabilitar botones según la selección.
+      // Al seleccionar filas (mismo recurso), multipleColumnsSelected es false.
+      document.getElementById('ctxAgendarBtn').disabled = multipleColumnsSelected;
+      document.getElementById('ctxBloquearBtn').disabled = false; // Siempre se puede bloquear.
+      
+      // Posicionar y mostrar el menú.
+      if (info.jsEvent) {
+        contextMenu.style.left = info.jsEvent.pageX + 'px';
+        contextMenu.style.top = info.jsEvent.pageY + 'px';
+        contextMenu.style.display = 'block';
+      }
+    }, 10); // Un pequeño retardo de 10ms es suficiente.
+  },
         dateClick: function(info) {
           // Mejorar detección de eventos con múltiples selectores
           var target = info.jsEvent.target;
@@ -2735,24 +2953,20 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             contextMenu.style.top = info.jsEvent.pageY + 'px';
           }
         },
-  // Agregar eventClick como backup en caso de que eventDidMount no funcione
-        eventClick: function(info) {
+    eventClick: function(info) {
+      // Prevenir el comportamiento por defecto del navegador
+      info.jsEvent.preventDefault();
+      
+      // Detener la propagación para evitar que otros listeners se activen
+      info.jsEvent.stopPropagation();
+      info.jsEvent.stopImmediatePropagation();
 
-          
-          info.jsEvent.preventDefault();
-          info.jsEvent.stopPropagation();
-          info.jsEvent.stopImmediatePropagation();
-          
-          // Cerrar menú contextual
-          var contextMenu = document.getElementById('context-menu');
-          if (contextMenu) {
-            contextMenu.style.display = 'none';
-          }
-          
-          // Abrir modal de editar
-          abrirModalEditarCita(info.event);
-          return false;
-        },
+      // Llamar a la función que abre el modal de edición
+      abrirModalEditarCita(info.event);
+
+      // Devolver false para indicar que hemos manejado el evento
+      return false;
+    },
   viewDidMount: function() {
           function iniciarObservador(attempt) {
             attempt = attempt || 0;
@@ -3074,27 +3288,18 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       document.getElementById('estado-select').addEventListener('change', function() {
         var estadoId = this.value;
         if (estadoId === 'todos') {
-          calendar.setOption('events', 'citas_json.php');
+          calendar.setOption('events', 'citas/citas_json.php');
         } else {
           calendar.setOption('events', function(fetchInfo, successCallback, failureCallback) {
-            fetch('citas_json.php')
+            fetch('citas/citas_json.php')
               .then(r => r.json())
               .then(data => {
                 var filtrados = data.filter(ev => {
                   // Filtrar por estado_id si existe, si no por estado (nombre)
                   if (typeof ev.estado_id !== 'undefined') {
                     return String(ev.estado_id) === String(estadoId);
-                  } else if (typeof ev.estado !== 'undefined') {
-                    // El valor del select es el id, pero si el JSON tiene nombre, mapearlo
-                    var nombres = {
-                      '1': 'Reservado',
-                      '2': 'Confirmado',
-                      '3': 'Asistió',
-                      '4': 'No asistió',
-                      '5': 'Pendiente',
-                      '6': 'En espera'
-                    };
-                    return ev.estado === nombres[estadoId];
+                  } else if (typeof ev.extendedProps !== 'undefined' && typeof ev.extendedProps.estado_id !== 'undefined') {
+                    return String(ev.extendedProps.estado_id) === String(estadoId);
                   }
                   return false;
                 });
@@ -3227,6 +3432,14 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
       document.getElementById('formAgendar').onsubmit = function(e) {
         e.preventDefault();
         console.log('Formulario de agendar enviado.'); // Debug log: Se inicia el envío del formulario
+
+        // --- INICIO: Lógica de botón de carga ---
+        const submitBtn = document.getElementById('btnGuardarCita');
+        const originalBtnContent = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fas fa-spinner spinner-icon" style="margin-right:6px;"></i> <span>Guardando...</span>`;
+        // --- FIN: Lógica de botón de carga ---
+
         var fecha = document.getElementById('agendarFecha').value;
         var horaInicio = document.getElementById('agendarHoraInicio').value;
         var horaFin = document.getElementById('agendarHoraFin').value;
@@ -3293,6 +3506,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                 }
             } else {
                 alert('Error al guardar cita: ' + (data.error_details || data.error || 'Error desconocido.'));
+                // Restaurar botón en caso de error
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnContent;
             }
         })
         .catch(err => {
@@ -3303,6 +3519,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             } else {
                 alert('Error al procesar la respuesta del servidor: ' + err.message);
             }
+            // Restaurar botón en caso de error de conexión/fetch
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnContent;
         });
       };
     });
@@ -3442,6 +3661,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
     
     // Cerrar sidebar al hacer clic en enlaces (móvil)
     document.addEventListener('DOMContentLoaded', function() {
+      cargarTiposDePaciente();
       var sidebarLinks = document.querySelectorAll('.sidebar a, .sidebar button');
       sidebarLinks.forEach(function(link) {
         link.addEventListener('click', function() {

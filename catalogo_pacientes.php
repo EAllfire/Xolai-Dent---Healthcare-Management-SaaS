@@ -279,7 +279,7 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             $('#pacientes-table').hide();
             $('#empty-state').hide();
             
-            fetch('pacientes_json.php')
+            fetch('citas/pacientes_json.php')
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) throw new Error(data.error);
@@ -368,29 +368,39 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                 form.reportValidity();
                 return;
             }
-            const formData = new FormData(form);
             
             const isEdit = document.getElementById('paciente_id').value !== '';
-            const url = isEdit ? 'actualizar_paciente.php' : 'guardar_paciente.php';
+            const url = isEdit ? 'actualizar_paciente.php' : 'citas/guardar_paciente.php'; // La URL para actualizar es correcta
+
+            let fetchOptions = {
+                method: 'POST'
+            };
+
+            if (isEdit) {
+                // Para editar, enviamos JSON como lo espera actualizar_paciente.php
+                const data = Object.fromEntries(new FormData(form));
+                fetchOptions.headers = { 'Content-Type': 'application/json' };
+                fetchOptions.body = JSON.stringify(data);
+            } else {
+                // Para crear, enviamos FormData como lo espera guardar_paciente.php
+                fetchOptions.body = new FormData(form);
+            }
             
-            fetch(url, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    $('#modalPaciente').modal('hide');
-                    cargarPacientes();
-                    alert(isEdit ? 'Paciente actualizado correctamente' : 'Paciente creado correctamente');
-                } else {
-                    alert('Error: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al guardar el paciente.');
-            });
+            fetch(url, fetchOptions)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        $('#modalPaciente').modal('hide');
+                        cargarPacientes();
+                        alert(isEdit ? 'Paciente actualizado correctamente' : 'Paciente creado correctamente');
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al guardar el paciente.');
+                });
         }
 
         function eliminarPaciente(id) {
