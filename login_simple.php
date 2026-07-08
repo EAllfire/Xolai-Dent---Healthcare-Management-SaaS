@@ -4,7 +4,7 @@ require_once 'includes/db.php';
 
 // Si ya está logueado, redirigir al dashboard
 if (isset($_SESSION['usuario_id'])) {
-    header('Location: index.php');
+    header('Location: home.php');
     exit;
 }
 
@@ -23,7 +23,7 @@ if ($_POST) {
     if ($usuario && $password) {
         try {
             // Buscar usuario - usar nombre_usuario y password (con hash)
-            $sql = "SELECT id, nombre_usuario, password, nombre, tipo FROM agenda_usuarios WHERE nombre_usuario = ?";
+            $sql = "SELECT id, id_padre, nombre_usuario, password, nombre, tipo FROM agenda_usuarios WHERE nombre_usuario = ?";
             $stmt = $conn->prepare($sql);
             
             if (!$stmt) {
@@ -35,11 +35,12 @@ if ($_POST) {
             $stmt->store_result();
             
             if ($stmt->num_rows === 1) {
-                $stmt->bind_result($id, $nombre_usuario, $password_hash, $nombre, $tipo);
+                $stmt->bind_result($id, $id_padre, $nombre_usuario, $password_hash, $nombre, $tipo);
                 $stmt->fetch();
                 
                 $user = [
                     'id' => $id,
+                    'id_padre' => $id_padre,
                     'nombre_usuario' => $nombre_usuario,
                     'password' => $password_hash,
                     'nombre' => $nombre,
@@ -50,12 +51,13 @@ if ($_POST) {
                 if (password_verify($password, $user['password'])) {
                     // Login exitoso
                     $_SESSION['usuario_id'] = $user['id'];
+                    $_SESSION['id_padre'] = $user['id_padre'];
                     $_SESSION['usuario_nombre'] = $user['nombre'];
                     $_SESSION['usuario_tipo'] = $user['tipo'];
                     $_SESSION['usuario_login'] = $user['nombre_usuario'];
                     
                     // Redirigir al dashboard
-                    header('Location: index.php');
+                    header('Location: home.php');
                     exit;
                 } else {
                     $error = 'Credenciales incorrectas';

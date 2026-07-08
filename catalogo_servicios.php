@@ -4,7 +4,7 @@ require_once 'includes/auth.php';
 require_once 'includes/db.php';
 
 // Verificar que solo los admins puedan acceder
-if (!puedeRealizar('gestionar_usuarios')) {
+if (!puedeRealizar('gestionar_servicios') && $_SESSION['usuario_tipo'] !== 'dentista') {
     header('Location: index.php');
     exit;
 }
@@ -14,136 +14,311 @@ $usuario = obtenerUsuarioActual();
 // Variables para el header
 $user_nombre = $usuario['nombre'] ?? 'Usuario';
 $user_tipo = $usuario['tipo'] ?? 'usuario';
+$es_admin = ($user_tipo === 'admin');
+$puede_ver_admin = in_array($user_tipo, ['admin', 'medico', 'dentista']);
+
+// Configuración del header
+$show_calendar = true;
+$show_back = true;
+$show_admin_tools = true;
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Servicios - Hospital Angeles</title>
+    <title>Catálogo de Trataminetos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif;
+            background-color: #000000; /* Fondo negro */
+            color: #e5e7eb; /* Texto claro */
+            padding-top: 0;
             margin: 0;
-            padding-top: 100px;
         }
+        
+        /* Header Styles (Igual que Home) */
         .main-header {
-            background: #1275a0;
+            background: rgba(10, 10, 10, 0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             color: white;
             height: 80px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
-            border-bottom-left-radius: 20px;
-            border-bottom-right-radius: 20px;
-            font-family: Arial, sans-serif;
+            padding: 0 40px;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 1050;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
         }
-        .header-left, .header-right {
+        
+        .header-left, .header-center, .header-right {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
         }
-        .logo-section {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            flex-direction: column;
-            text-align: center;
+        .header-left { flex: 1; justify-content: flex-start; }
+        .header-center { flex: 2; justify-content: center; }
+        .header-right { flex: 1; justify-content: flex-end; }
+
+        .header-logo-img {
+            height: 45px;
+            width: auto;
         }
-        .header-logo img {
-            max-height: 60px;
-        }
-        .logo-text {
-            margin: 0;
+        
+        .header-title {
             font-size: 24px;
-            font-weight: bold;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 1px;
         }
+        
+        .nav-link {
+            color: #a0a0a0;
+            font-weight: 500;
+            font-size: 15px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
         .user-info {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 14px;
+            gap: 10px;
+            font-weight: 500;
         }
+
         .btn-header {
-            color: white;
+            color: #e5e7eb;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 10px;
             text-decoration: none;
-            font-weight: bold;
-            padding: 0.5rem 1rem;
-            font-size: 13px;
+            transition: all 0.2s ease;
         }
+        .btn-header:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Settings Dropdown Styles */
+        .settings-container {
+            position: relative;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .settings-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #e5e7eb;
+            padding: 6px 10px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            transform: rotate(90deg);
+        }
+        .custom-dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background-color: #0a0a0a;
+            min-width: 200px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border-radius: 12px;
+            z-index: 1100;
+            overflow: hidden;
+            margin-top: 10px;
+            border: 1px solid #333;
+            text-align: left;
+        }
+        .custom-dropdown-menu.show {
+            display: block;
+        }
+        .custom-dropdown-menu a {
+            color: #e5e7eb;
+            padding: 12px 20px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+            transition: all 0.2s;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .custom-dropdown-menu a:hover {
+            background-color: rgba(41, 121, 255, 0.1);
+            color: #2979ff;
+        }
+
+        /* Page Content Styles */
         .container-custom {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 15px;
+            padding: 120px 40px 40px 40px;
         }
-        .page-title {
-            font-size: 2rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
+
         .actions-bar {
-            background: #ffffff;
+            background: #0a0a0a;
             padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             margin-bottom: 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
+
         .table-container {
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: #0a0a0a;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
             padding: 1.5rem;
+            overflow-x: auto;
         }
+
+        .table {
+            color: #e5e7eb;
+            margin-bottom: 0;
+        }
+        .table thead th {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #9ca3af;
+            border-top: none;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        .table td {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: middle;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(41, 121, 255, 0.05);
+            color: #e5e7eb;
+        }
+
+        .form-control {
+            background: #000000;
+            border: 1px solid #333;
+            color: #e5e7eb;
+            border-radius: 8px;
+        }
+        .form-control:focus {
+            background: #000000;
+            color: #fff;
+            border-color: #2979ff;
+            box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.2);
+        }
+
+        .btn-primary {
+            background: #2979ff;
+            border-color: #2979ff;
+        }
+        .btn-primary:hover {
+            background: #2962ff;
+            border-color: #2962ff;
+        }
+        .btn-secondary {
+            background: #1f2937;
+            border-color: #374151;
+            color: #e5e7eb;
+        }
+        .btn-secondary:hover {
+            background: #374151;
+            border-color: #4b5563;
+        }
+        .btn-info {
+            background: #0ea5e9;
+            border-color: #0ea5e9;
+            color: white;
+        }
+        
+        /* Modal Styles */
+        .modal-content {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #e5e7eb;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+        }
+        .modal-header { border-bottom: 1px solid #333; background: #111; }
+        .modal-footer { border-top: 1px solid #333; background: #111; }
+        .close { color: #e5e7eb; opacity: 0.7; }
+        .close:hover { color: #fff; opacity: 1; }
+        .badge-info { background: rgba(41, 121, 255, 0.15); color: #60a5fa; border: 1px solid rgba(41, 121, 255, 0.3); }
     </style>
-</head>
-<body>
-    <!-- Header -->
+
     <header class="main-header">
         <div class="header-left">
-            <div class="header-logo">
-                <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles">
-            </div>
-            <div class="user-info">
-                <i class="fas fa-user-circle"></i>
-                <span><?php echo htmlspecialchars($user_nombre); ?></span>
-                <span class="user-type">(<?php echo ucfirst($user_tipo); ?>)</span>
-            </div>
+            <img src="images/Xolai.png" alt="Xolai Logo" class="header-logo-img">
+            <span class="header-title">Xolai</span>
         </div>
-        <div class="logo-section">
-            <div class="logo-text">IMAGENOLOGÍA</div>
-        </div>
+        <nav class="header-center">
+            <a href="home.php" class="nav-link">Inicio</a>
+            <a href="index.php" class="nav-link">Agenda</a>
+            <a href="catalogo_pacientes.php" class="nav-link">Pacientes</a>
+            <a href="pagos.php" class="nav-link">Pagos</a>
+            <?php if ($puede_ver_admin): ?>
+                <a href="panel_admin.php" class="nav-link">Administración</a>
+            <?php endif; ?>
+        </nav>
         <div class="header-right">
-            <a href="index.php" class="btn-header"><i class="fas fa-calendar"></i> Calendario</a>
-            <a href="panel_admin.php" class="btn-header"><i class="fas fa-cog"></i> Panel de Administración</a>
-            <a href="logout.php" class="btn-header"><i class="fas fa-sign-out-alt"></i> Salir</a>
+            <div class="user-info">
+                <span><?php echo htmlspecialchars($user_nombre); ?></span>
+                <i class="fas fa-user-circle"></i>
+            </div>
+      
+            <?php if ($puede_ver_admin): ?>
+            <div class="settings-container">
+                <button onclick="toggleSettingsDropdown()" class="settings-btn" title="Configuración">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div id="ajustesDropdown" class="custom-dropdown-menu">
+                    <a href="catalogo_servicios.php"><i class="fas fa-stethoscope"></i> Tratamientos</a>
+                    <a href="admin_modalidades.php"><i class="fas fa-layer-group"></i> Consultorios</a>
+                    <?php if (in_array($user_tipo, ['admin', 'dentista'])): ?>
+                        <a href="admin_usuarios.php"><i class="fas fa-users"></i> Gestionar Equipo</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <div class="header-buttons">
+                <a href="logout.php" class="btn-header">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
         </div>
     </header>
 
-    <!-- Main Content -->
     <div class="container-custom">
-        <h1 class="page-title">Catálogo de Servicios</h1>
-        
         <div class="actions-bar">
             <div>
                 <a href="panel_admin.php" class="btn btn-secondary mr-2"><i class="fas fa-arrow-left"></i> Volver al Panel</a>
                 <button class="btn btn-primary" onclick="abrirModalNuevoServicio()">
-                    <i class="fas fa-plus"></i> Nuevo Servicio
+                    <i class="fas fa-plus"></i> Nuevo Tratamiento
                 </button>
                 <button class="btn btn-info ml-2" id="bulkEditBtn" onclick="abrirModalBulkEdit()" disabled>
                     <i class="fas fa-edit"></i> Modificar Seleccionados
@@ -161,18 +336,19 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
         </div>
         
         <div class="table-container">
-            <div id="loading" class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Cargando servicios...</div>
+            <div id="loading" class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Cargando trataminetos...</div>
             <div id="services-table" style="display: none;">
                 <table class="table table-hover">
                     <thead>
                         <tr>
                             <th><input type="checkbox" id="selectAllCheckbox" title="Seleccionar todo"></th>
                             <th>ID</th>
-                            <th>Nombre del Servicio</th>
+                            <th>Nombre del Tratamineto</th>
                             <th>Descripción</th>
                             <th>Precio</th>
                             <th>Duración</th>
-                            <th>Modalidad</th>
+                            <th>Especialidad</th>
+                            <th>Dóctor</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -180,7 +356,7 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                 </table>
             </div>
             <div id="empty-state" class="text-center p-5" style="display: none;">
-                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                <i class="fas fa-list fa-3x mb-3 text-muted"></i>
                 <h4>No hay servicios registrados</h4>
                 <p>Comience agregando su primer servicio al catálogo.</p>
             </div>
@@ -192,17 +368,17 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Modificar Descripción de Servicios Seleccionados</h5>
+                    <h5 class="modal-title">Modificar Descripción de Tratamientos Seleccionados</h5>
                     <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <p>Se modificarán <strong id="selected-count">0</strong> servicios.</p>
+                    <p>Se modificarán <strong id="selected-count">0</strong> tratamientos.</p>
                     <div class="form-group">
                         <label for="bulk_descripcion">Nueva Descripción</label>
                         <textarea class="form-control" id="bulk_descripcion" name="bulk_descripcion" rows="5" placeholder="Escribe la nueva descripción que se aplicará a todos los servicios seleccionados."></textarea>
                     </div>
                     <div class="alert alert-info">
-                        <strong>Nota:</strong> Esta acción reemplazará la descripción actual de todos los servicios seleccionados.
+                        <strong>Nota:</strong> Esta acción reemplazará la descripción actual de todos los tratamientos seleccionados.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -219,14 +395,14 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalServicioTitle">Nuevo Servicio</h5>
+                    <h5 class="modal-title" id="modalServicioTitle">Nuevo Tratamiento</h5>
                     <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <form id="formServicio">
-                        <input type="hidden" id="servicio_id" name="id">
                         <div class="form-group">
-                            <label for="nombre">Nombre del Servicio *</label>
+                            <input type="hidden" id="servicio_id" name="id">
+                            <label for="nombre">Nombre del Tratamiento *</label>
                             <input type="text" class="form-control" id="nombre" name="nombre" required>
                         </div>
                         <div class="row">
@@ -250,9 +426,9 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                             <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
                         </div>
                         <div class="form-group">
-                            <label>Modalidad Asociada</label>
-                            <select class="form-control" id="modalidad_id" name="modalidad_id">
-                                <option value="">Seleccionar modalidad...</option>
+                            <label for="especialidad_id">Especialidad Asociada</label>
+                            <select class="form-control" id="especialidad_id" name="especialidad_id">
+                                <option value="">General (Sin especialidad)</option>
                             </select>
                         </div>
                     </form>
@@ -270,11 +446,11 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let especialidades = [];
         let servicios = [];
-        let modalidades = [];
-
+        
         $(document).ready(function() {
-            cargarModalidades();
+            cargarEspecialidades();
             cargarServicios();
 
             $('#searchInput').on('keyup', function() {
@@ -305,22 +481,23 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             });
         });
 
-        function cargarModalidades() {
-            fetch('citas/modalidades_json.php')
+        function cargarEspecialidades() {
+            fetch('citas/especialidades_json.php')
                 .then(response => response.json())
                 .then(data => {
-                    modalidades = data;
-                    const select = document.getElementById('modalidad_id');
-                    data.forEach(modalidad => {
+                    if (!Array.isArray(data)) return;
+                    especialidades = data;
+                    const select = document.getElementById('especialidad_id');
+                    select.innerHTML = '<option value="">General (Sin especialidad)</option>';
+                    data.forEach(especialidad => {
                         const option = document.createElement('option');
-                        option.value = modalidad.id;
-                        option.textContent = modalidad.nombre;
+                        option.value = especialidad.id;
+                        option.textContent = especialidad.nombre;
                         select.appendChild(option);
                     });
                 })
-                .catch(error => console.error('Error al cargar modalidades:', error));
+                .catch(error => console.error('Error al cargar especialidades:', error));
         }
-
         function cargarServicios() {
             $('#loading').show();
             $('#services-table').hide();
@@ -367,7 +544,8 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                     <td>${servicio.descripcion || '-'}</td>
                     <td>$${servicio.precio ? parseFloat(servicio.precio).toLocaleString('es-MX') : '0.00'}</td>
                     <td><span class="badge badge-info">${servicio.duracion_minutos || 30} min</span></td>
-                    <td><small class="text-muted">${servicio.modalidad_nombre || '-'}</small></td>
+                    <td><small class="text-muted">${servicio.especialidad_nombre || 'General'}</small></td>
+                    <td><small class="text-muted">${servicio.medico_nombre || ''}</small></td>
                     <td>
                         <button class="btn btn-sm btn-success" onclick="editarServicio(${servicio.id})" title="Editar"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-sm btn-danger" onclick="eliminarServicio(${servicio.id})" title="Eliminar"><i class="fas fa-trash"></i></button>
@@ -383,7 +561,7 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             if (totalFiltrado !== undefined && totalFiltrado !== totalServicios) {
                  document.getElementById('total-servicios').textContent = `Mostrando ${totalFiltrado} de ${totalServicios} servicios`;
             } else {
-                 document.getElementById('total-servicios').textContent = `${totalServicios} servicios registrados`;
+                 document.getElementById('total-servicios').textContent = `${totalServicios} tratamientos registrados`;
             }
         }
 
@@ -404,7 +582,7 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
             document.getElementById('descripcion').value = servicio.descripcion || '';
             document.getElementById('precio').value = servicio.precio || '';
             document.getElementById('duracion_minutos').value = servicio.duracion_minutos || 30;
-            document.getElementById('modalidad_id').value = servicio.modalidad_id || '';
+            document.getElementById('especialidad_id').value = servicio.especialidad_id || '';
             
             $('#modalServicio').modal('show');
         }
@@ -511,6 +689,23 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
                     console.error('Error:', error);
                     alert('Ocurrió un error al procesar la solicitud.');
                 });
+            }
+        }
+
+        function toggleSettingsDropdown() {
+            document.getElementById("ajustesDropdown").classList.toggle("show");
+        }
+
+        // Cerrar el dropdown si se hace click fuera
+        window.onclick = function(event) {
+            if (!event.target.matches('.settings-btn') && !event.target.closest('.settings-btn')) {
+                var dropdowns = document.getElementsByClassName("custom-dropdown-menu");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
             }
         }
     </script>

@@ -89,6 +89,31 @@ try {
     $dt->modify("+{$duracion} minutes");
     $hora_fin = $dt->format('H:i');
 
+    // --- NUEVO PASO: OBTENER EL usuario_id DEL SERVICIO O MODALIDAD ---
+    $usuario_propietario_id = null;
+    if (!empty($servicio_id)) {
+        $stmt_owner = $conn->prepare("SELECT usuario_id FROM portal_servicios WHERE id = ?");
+        $stmt_owner->bind_param("i", $servicio_id);
+        $stmt_owner->execute();
+        $stmt_owner->bind_result($owner_id);
+        if ($stmt_owner->fetch()) {
+            $usuario_propietario_id = $owner_id;
+        }
+        $stmt_owner->close();
+    }
+    if (empty($usuario_propietario_id) && !empty($modalidad_id)) {
+        $stmt_owner = $conn->prepare("SELECT usuario_id FROM agenda_modalidades WHERE id = ?");
+        $stmt_owner->bind_param("i", $modalidad_id);
+        $stmt_owner->execute();
+        $stmt_owner->bind_result($owner_id);
+        if ($stmt_owner->fetch()) {
+            $usuario_propietario_id = $owner_id;
+        }
+        $stmt_owner->close();
+    }
+    // Como es un script de prueba, si no se encuentra un dueño, se asigna al admin por defecto.
+    if (empty($usuario_propietario_id)) $usuario_propietario_id = 1;
+
     // 5) asegurar paciente: si no existe paciente_id buscar por telefono o crear
     if (empty($paciente_id)) {
         $paciente_id = null;
@@ -106,9 +131,10 @@ try {
         }
         if (empty($paciente_id)) {
             // crear paciente mínimo
-            $stmt = $conn->prepare("INSERT INTO portal_pacientes (nombre, apellido, telefono, correo, diagnostico, tipo, origen) VALUES (?, ?, ?, ?, ?, 'externo', 'manual')");
+            // CORRECCIÓN: Usar columnas 'alergias' y 'tipo_id' y añadir 'usuario_id'
+            $stmt = $conn->prepare("INSERT INTO portal_pacientes (usuario_id, nombre, apellido, telefono, correo, alergias, tipo_id, origen) VALUES (?, ?, ?, ?, ?, ?, 1, 'manual')");
             $diag = 'Registro automático para prueba';
-            $stmt->bind_param('sssss', $nombre, $apellido, $telefono, $correo, $diag);
+            $stmt->bind_param('isssss', $usuario_propietario_id, $nombre, $apellido, $telefono, $correo, $diag);
             if (!$stmt->execute()) throw new Exception('Error al crear paciente: ' . $stmt->error);
             $paciente_id = $conn->insert_id;
             $stmt->close();
@@ -130,11 +156,12 @@ try {
     }
 
     // 7) Insertar la cita
-    $stmt = $conn->prepare("INSERT INTO agenda_citas (fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, nota_paciente, nota_interna, tipo) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, '', 'manual')");
+    // CORRECCIÓN: Añadir 'usuario_id' a la inserción de la cita
+    $stmt = $conn->prepare("INSERT INTO agenda_citas (usuario_id, fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, nota_paciente, nota_interna, tipo) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, '', 'manual')");
     if (!$stmt) throw new Exception('Error preparando insert cita: ' . $conn->error);
     $nota = 'Creada por crear_cita_hoy.php';
     $prof = null; // no asignamos profesional
-    $stmt->bind_param('sssiiiss', $fecha, $hora_inicio, $hora_fin, $paciente_id, $servicio_id, $modalidad_id, $estado_id, $nota);
+    $stmt->bind_param('isssiiiss', $usuario_propietario_id, $fecha, $hora_inicio, $hora_fin, $paciente_id, $servicio_id, $modalidad_id, $estado_id, $nota);
     if (!$stmt->execute()) {
         throw new Exception('Error al insertar cita: ' . $stmt->error);
     }

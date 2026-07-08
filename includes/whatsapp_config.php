@@ -24,7 +24,8 @@ $WHATSAPP_CONFIG = [
     "access_token"      => getenv("WHATSAPP_ACCESS_TOKEN") ?: "",
     "phone_number_id"   => getenv("WHATSAPP_PHONE_NUMBER_ID") ?: "",
     "business_account_id" => getenv("WHATSAPP_BUSINESS_ACCOUNT_ID") ?: "",
-    "template_name"     => "citaagendada",
+    "template_name"     => "citaagendada", // Plantilla para confirmación inicial
+    "template_recordatorio" => "recordatoriocita", // Plantilla para recordatorios
     "language_code"     => "es_MX",
     "api_version"       => "v18.0",
 

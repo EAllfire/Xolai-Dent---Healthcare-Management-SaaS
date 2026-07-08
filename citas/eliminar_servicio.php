@@ -1,10 +1,10 @@
 <?php
 session_start();
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/db.php';
 
 // Verificar que el usuario sea admin
-if (!puedeRealizar('gestionar_usuarios')) {
+if (!puedeRealizar('gestionar_servicios')) {
     http_response_code(403);
     echo json_encode(['error' => 'Acceso denegado']);
     exit;

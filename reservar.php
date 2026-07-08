@@ -2,13 +2,21 @@
 session_start();
 // Recuperar datos del paciente desde la sesión, si existen
 $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
+
+// Recuperar el ID del médico de la URL para mantener la navegación
+$medico_id = isset($_GET['medico_id']) ? (int)$_GET['medico_id'] : 0;
+$link_cliente = "cliente.php";
+$params = [];
+if ($paciente_data) $params[] = 'portal_usuario_id=' . ($paciente_data['lookup_portal_id'] ?? '');
+if ($medico_id > 0) $params[] = 'medico_id=' . $medico_id;
+if (!empty($params)) $link_cliente .= '?' . implode('&', $params);
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reservar Cita - Hospital Angeles</title>
+    <title>Reservar Cita - Sistema de Gestión de Citas</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -21,72 +29,123 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
     
     <style>
         :root {
-            --primary-color: #1f2937;
-            --secondary-color: #3b82f6;
-            --accent-color: #0f5f85;
-            --light-bg: #f8fafc;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --primary-color: #ffffff;
+            --secondary-color: #a0a0a0;
+            --accent-color: #2979ff;
+            --gradient-bg: #000000;
+            --light-bg: #000000;
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --danger-color: #ef4444;
         }
 
         body {
             font-family: 'Inter', sans-serif;
             line-height: 1.6;
-            color: #374151;
+            color: #e5e7eb;
             background: var(--light-bg);
-            padding-top: 100px;
+            padding-top: 0;
         }
 
-        /* Header */
-        .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: var(--card-shadow);
-            padding: 1rem 0;
+        /* Header Styles from cliente.php */
+        .main-header {
+            background: rgba(10, 10, 10, 0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: white;
+            height: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
         }
+        
+        .header-left, .header-center, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .header-left { flex: 1; justify-content: flex-start; }
+        .header-center { flex: 2; justify-content: center; }
+        .header-right { flex: 1; justify-content: flex-end; }
 
-        .navbar-brand {
+        .header-logo-img {
+            height: 45px;
+            width: auto;
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.1)) brightness(1.1);
+        }
+        
+        .header-title {
+            font-size: 24px;
             font-weight: 700;
-            color: var(--primary-color) !important;
-            font-size: 1.5rem;
+            color: white;
+            letter-spacing: 1px;
+        }
+
+        .nav-link {
+            color: #a0a0a0 !important;
+            font-weight: 500;
+            font-size: 15px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            color: white !important;
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .contact-info-header {
+            font-size: 12px;
+            color: #9ca3af;
+            text-align: right;
+            line-height: 1.4;
+            margin-right: 15px;
         }
 
         .back-btn {
-            background: var(--secondary-color);
-            color: white;
-            border: none;
+            background: rgba(41, 121, 255, 0.1);
+            color: #e5e7eb;
+            border: 1px solid rgba(41, 121, 255, 0.2);
             padding: 0.5rem 1rem;
             border-radius: 8px;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
             transition: all 0.3s ease;
         }
 
         .back-btn:hover {
-            background: #2563eb;
+            background: rgba(41, 121, 255, 0.2);
             color: white;
-            transform: translateY(-2px);
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.2);
         }
 
         /* Main Content */
         .main-container {
+            margin-top: 120px;
             margin-bottom: 3rem;
         }
 
         .reservation-card {
-            background: white;
+            background: #0a0a0a;
             border-radius: 20px;
             box-shadow: var(--card-shadow);
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .card-header {
-            background: linear-gradient(135deg, var(--accent-color), #0f5f85 100%);
+            background: linear-gradient(135deg, #111 0%, #000 100%);
             color: white;
             padding: 2rem;
             text-align: center;
+            border-bottom: 1px solid rgba(41, 121, 255, 0.2);
         }
 
         .card-header h2 {
@@ -106,11 +165,12 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
 
         /* Service/Package Summary */
         .service-summary {
-            background: #f8fafc;
+            background: #111;
             border-radius: 12px;
             padding: 1.5rem;
             margin-bottom: 2rem;
             border-left: 4px solid var(--accent-color);
+            border: 1px solid #333;
         }
 
         .service-title {
@@ -128,7 +188,7 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
         }
 
         .service-details {
-            color: #6b7280;
+            color: #9ca3af;
             font-size: 0.95rem;
         }
 
@@ -155,7 +215,7 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
         .form-section {
             margin-bottom: 2rem;
             padding-bottom: 2rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid #333;
         }
 
         .form-section:last-child {
@@ -181,7 +241,9 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
         }
 
         .form-control {
-            border: 2px solid #e5e7eb;
+            background: #050505;
+            border: 1px solid #333;
+            color: #e5e7eb;
             border-radius: 12px;
             padding: 0.75rem 1rem;
             transition: all 0.3s ease;
@@ -189,13 +251,17 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
         }
 
         .form-control:focus {
+            background: #050505;
+            color: #fff;
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.2);
             outline: none;
         }
 
         .form-select {
-            border: 2px solid #e5e7eb;
+            background: #050505;
+            border: 1px solid #333;
+            color: #e5e7eb;
             border-radius: 12px;
             padding: 0.75rem 1rem;
             transition: all 0.3s ease;
@@ -203,45 +269,55 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
 
         .form-select:focus {
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.2);
             outline: none;
         }
 
         /* Date and Time Selection */
         .time-slots {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 0.75rem;
-            margin-top: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); /* Columnas más uniformes */
+            gap: 12px;
+            margin-top: 15px;
         }
 
         .time-slot {
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 0.75rem;
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 10px;
+            padding: 12px 5px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95rem;
             font-weight: 500;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .time-slot:hover {
             border-color: var(--accent-color);
-            background: #f0fdf4;
+            background: rgba(41, 121, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         .time-slot.selected {
             background: var(--accent-color);
             border-color: var(--accent-color);
             color: white;
+            box-shadow: 0 0 15px rgba(41, 121, 255, 0.5);
+            transform: scale(1.05);
+            font-weight: 700;
         }
 
         .time-slot.unavailable {
-            background: #f3f4f6;
-            border-color: #d1d5db;
-            color: #9ca3af;
+            background: #222;
+            border-color: #333;
+            color: #555;
             cursor: not-allowed;
         }
 
@@ -253,14 +329,14 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
         }
 
         .alert-success {
-            background: #f0fdf4;
-            color: #0f5f85 100%;
+            background: rgba(41, 121, 255, 0.1);
+            color: #2979ff;
             border-left: 4px solid var(--accent-color);
         }
 
         .alert-danger {
-            background: #fef2f2;
-            color: #dc2626;
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
             border-left: 4px solid var(--danger-color);
         }
 
@@ -275,13 +351,13 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
         }
 
         .btn-primary:hover {
-            background: #0f5f85 100%;
+            background: #2962ff;
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px -4px #144458ff 100%;
+            box-shadow: 0 0 20px rgba(41, 121, 255, 0.6);
         }
 
         .btn-secondary {
-            background: #6b7280;
+            background: #333;
             border: none;
             border-radius: 12px;
             padding: 0.875rem 2rem;
@@ -290,7 +366,7 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
         }
 
         .btn-secondary:hover {
-            background: #4b5563;
+            background: #444;
         }
 
         /* Loading States */
@@ -348,23 +424,31 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="cliente.php">
-                <img src="images/logo.png" alt="Hospital Angeles" height="50" class="me-3">
-                <div>
-                    <div style="font-size: 1.2rem; font-weight: 700;">Hospital Angeles</div>
-                    <div style="font-size: 0.8rem; color: #6b7280; font-weight: 400;">Imagenología</div>
-                </div>
-            </a>
-            
-            <a href="javascript:history.back()" class="back-btn">
-                <i class="fas fa-arrow-left"></i>
-                Regresar
+    <!-- Header Mejorado (Estilo cliente.php) -->
+    <header class="main-header">
+        <div class="header-left">
+            <a href="<?php echo $link_cliente; ?>" class="header-logo" style="text-decoration: none; display: flex; align-items: center;">
+                <img src="images/Xolai.png" alt="Xolai Logo" class="header-logo-img">
+                <span class="header-title" style="margin-left: 10px;">Xolai</span>
             </a>
         </div>
-    </nav>
+        
+        <div class="header-center">
+            <div class="header-title d-none d-lg-block">SISTEMA DE GESTIÓN DE CITAS</div>
+        </div>
+        
+        <div class="header-right">
+            <div class="contact-info-header d-none d-md-block">
+                <div><i class="fas fa-map-marker-alt me-1"></i> Calle 12 335, entre guerrero y rayón, Zona Centro, 31500 Cuauhtémoc, Chih.</div>
+                <div><i class="fas fa-phone me-1"></i> +52 625 125 70 48</div>
+            </div>
+            <nav class="d-flex">
+                <a href="<?php echo $link_cliente; ?>" class="nav-link">
+                    <i class="fas fa-arrow-left me-1"></i>Regresar
+                </a>
+            </nav>
+        </div>
+    </header>
 
     <!-- Main Content -->
     <div class="container main-container">
@@ -418,30 +502,22 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
                                     <i class="fas fa-calendar-alt"></i> Fecha y Hora
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-5 mb-4">
                                         <label for="fecha_cita" class="form-label">Fecha Deseada *</label>
-                                        <input type="text" class="form-control" id="fecha_cita" name="fecha_cita" placeholder="Seleccionar fecha" required>
+                                        <div class="input-group">
+                                            <span class="input-group-text" style="background:#111;border-color:#333;color:#e5e7eb"><i class="fas fa-calendar"></i></span>
+                                            <input type="text" class="form-control" id="fecha_cita" name="fecha_cita" placeholder="Seleccionar fecha" required>
+                                        </div>
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-12 mb-3">
                                         <label class="form-label">Horarios Disponibles *</label>
-                                        <div id="timeSlots" class="time-slots"></div>
+                                        <div id="timeSlotsContainer" style="background: #050505; border: 1px solid #333; border-radius: 12px; padding: 20px;">
+                                            <div id="timeSlots" class="time-slots">
+                                                <p class="text-muted text-center w-100 m-0" style="grid-column: 1/-1;">Seleccione una fecha para ver horarios.</p>
+                                            </div>
+                                        </div>
                                         <input type="hidden" id="hora_seleccionada" name="hora_seleccionada" required>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- Carga de Documentos -->
-                            <div class="form-section">
-                                <div class="section-title">
-                                    <i class="fas fa-file-upload"></i> Carga de Documentos (Opcional)
-                                </div>
-                                <div class="mb-3">
-                                    <label for="foto_identificacion" class="form-label">Foto de Identificación (INE/Pasaporte)</label>
-                                    <input type="file" class="form-control" id="foto_identificacion" name="foto_identificacion" accept="image/*">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="foto_orden" class="form-label">Foto de Orden Médica</label>
-                                    <input type="file" class="form-control" id="foto_orden" name="foto_orden" accept="image/*">
                                 </div>
                             </div>
 
@@ -488,12 +564,18 @@ $paciente_data = $_SESSION['portal_paciente_data'] ?? null;
     // 🔹 Obtener parámetros de la URL
     function getParams() {
         const params = new URLSearchParams(window.location.search);
+        
+        // Limpieza robusta de modalidad_id
+        let modId = params.get('modalidad_id');
+        if (modId === 'undefined' || modId === null) modId = '';
+
         return {
             tipo: params.get('tipo') || '',
             servicio_id: params.get('servicio_id') || '',
             servicio_nombre: params.get('servicio_nombre') || '',
-            modalidad_id: params.get('modalidad_id') || '',
-            modalidad_nombre: params.get('modalidad_nombre') || ''
+            modalidad_id: modId,
+            modalidad_nombre: params.get('modalidad_nombre') || '',
+            medico_id: params.get('medico_id') || ''
         };
     }
 
@@ -524,9 +606,6 @@ function addPatientIdToData(jsonData) {
             document.getElementById('serviceSummary').innerHTML = `
                 <div class="service-title">
                     <i class="fas fa-medical me-2"></i>${reservationData.servicio_nombre}
-                </div>
-                <div class="service-details">
-                    <strong>Modalidad:</strong> ${reservationData.modalidad_nombre}
                 </div>`;
         }
     }
@@ -542,16 +621,26 @@ function addPatientIdToData(jsonData) {
         });
     }
 
+    // 🔹 Helper para formato AM/PM
+    function formatTime12(time24) {
+        if (!time24) return '';
+        const [h, m] = time24.split(':');
+        let hour = parseInt(h, 10);
+        const suffix = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12; // Convierte 0 a 12
+        return `${hour.toString().padStart(2, '0')}:${m} ${suffix}`;
+    }
+
     // 🔹 Generar y mostrar horarios
     async function loadAvailableSlots(fecha) {
         const cont = document.getElementById('timeSlots');
-        cont.innerHTML = '<p class="text-muted">Cargando horarios disponibles...</p>';
+        cont.innerHTML = '<p class="text-muted text-center w-100 m-0" style="grid-column: 1/-1;"><span class="spinner"></span> Cargando horarios...</p>';
         document.getElementById('hora_seleccionada').value = ''; // Limpiar selección previa
 
         let availableSlots = [];
         try {
             // Se añade servicio_id a la petición para calcular la duración
-            const response = await fetch(`horarios_disponibles.php?fecha=${fecha}&modalidad_id=${reservationData.modalidad_id}&servicio_id=${reservationData.servicio_id}`);
+            const response = await fetch(`horarios_disponibles.php?fecha=${fecha}&modalidad_id=${reservationData.modalidad_id}&servicio_id=${reservationData.servicio_id}&usuario_id=${reservationData.medico_id}`);
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'No se pudo conectar con el servidor de horarios.');
@@ -564,25 +653,47 @@ function addPatientIdToData(jsonData) {
 
         } catch (error) {
             console.error("Error al cargar horarios:", error);
-            cont.innerHTML = `<p class="text-danger">${error.message}</p>`;
+            cont.innerHTML = `<p class="text-danger text-center w-100 m-0" style="grid-column: 1/-1;">${error.message}</p>`;
             return;
         }
 
         cont.innerHTML = ''; // Limpiar el contenedor
 
         if (availableSlots.length === 0) {
-            cont.innerHTML = '<p class="text-muted">No hay horarios disponibles para esta fecha.</p>';
+            cont.innerHTML = '<p class="text-muted text-center w-100 m-0" style="grid-column: 1/-1;">No hay horarios disponibles para esta fecha.</p>';
             return;
         }
         
+        // Agrupar por Mañana / Tarde
+        const morning = availableSlots.filter(t => parseInt(t.split(':')[0]) < 12);
+        const afternoon = availableSlots.filter(t => parseInt(t.split(':')[0]) >= 12);
+
+        if (morning.length > 0) {
+            const h = document.createElement('div');
+            h.style.gridColumn = '1/-1';
+            h.className = 'text-primary fw-bold mb-2 mt-1';
+            h.innerHTML = '<i class="fas fa-sun me-2"></i>Mañana';
+            cont.appendChild(h);
+            morning.forEach(time => createSlot(time, cont));
+        }
+
+        if (afternoon.length > 0) {
+            const h = document.createElement('div');
+            h.style.gridColumn = '1/-1';
+            h.className = 'text-primary fw-bold mb-2 ' + (morning.length > 0 ? 'mt-4' : 'mt-1');
+            h.innerHTML = '<i class="fas fa-moon me-2"></i>Tarde';
+            cont.appendChild(h);
+            afternoon.forEach(time => createSlot(time, cont));
+        }
+    }
+
+    function createSlot(time, container) {
         // El backend ahora devuelve los horarios disponibles, simplemente los renderizamos
-        availableSlots.forEach(time => {
             const div = document.createElement('div');
             div.className = 'time-slot';
-            div.textContent = time;
+            div.textContent = formatTime12(time); // Mostrar formato AM/PM visualmente
             div.onclick = () => selectTimeSlot(time, div);
-            cont.appendChild(div);
-        });
+            container.appendChild(div);
     }
 
     function selectTimeSlot(time, el) {
@@ -613,6 +724,7 @@ function addPatientIdToData(jsonData) {
                 fecha_cita: form.fecha_cita.value,
                 hora_seleccionada: form.hora_seleccionada.value,
                 observaciones: form.observaciones.value,
+                atencion_especial: 0, // Valor por defecto eliminado del UI
             };
 
             // Añadir el ID del paciente a los datos que se envían, si existe
@@ -632,11 +744,6 @@ function addPatientIdToData(jsonData) {
             const formData = new FormData();
             formData.append('json_data', JSON.stringify(jsonData));
 
-            const ineFile = form.foto_identificacion.files[0];
-            if (ineFile) formData.append('foto_identificacion', ineFile);
-
-            const ordenFile = form.foto_orden.files[0];
-            if (ordenFile) formData.append('foto_orden', ordenFile);
 
             // 4. Enviar el FormData
             const response = await fetch('guardar_reserva_cliente.php', { method: 'POST', body: formData });
@@ -645,11 +752,9 @@ function addPatientIdToData(jsonData) {
             if (result.success) {
                 // Usar la URL de redirección que envía el servidor
                 showAlert('success', result.message || 'Reserva creada exitosamente. Redirigiendo...');
-                if (result.redirect_url) {
-                    setTimeout(() => {
-                        window.location.href = result.redirect_url;
-                    }, 2000); // Redirigir después de 2 segundos
-                }
+                setTimeout(() => {
+                    window.location.href = '<?php echo $link_cliente; ?>';
+                }, 2000);
             } else throw new Error(result.error || 'Error desconocido');
         } catch (err) {
             console.error('Error en reserva:', err);

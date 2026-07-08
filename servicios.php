@@ -17,16 +17,17 @@
         
         body {
             font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: #000000;
             min-height: 100vh;
         }
         
         /* Header */
         .header {
-            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            background: rgba(10, 10, 10, 0.95);
             color: white;
             padding: 2rem 0;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(41, 121, 255, 0.1);
         }
         
         .header-content {
@@ -51,9 +52,9 @@
         }
         
         .back-button {
-            background: rgba(255,255,255,0.1);
+            background: rgba(41, 121, 255, 0.1);
             color: white;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(41, 121, 255, 0.2);
             padding: 0.5rem 1rem;
             border-radius: 25px;
             text-decoration: none;
@@ -61,10 +62,11 @@
         }
         
         .back-button:hover {
-            background: rgba(255,255,255,0.2);
+            background: rgba(41, 121, 255, 0.2);
             color: white;
             text-decoration: none;
-            border-color: rgba(255,255,255,0.4);
+            border-color: rgba(41, 121, 255, 0.5);
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.3);
         }
         
         .modalidad-title {
@@ -84,32 +86,35 @@
             text-align: center;
             font-size: 2.2rem;
             font-weight: 600;
-            color: #1f2937;
+            color: #ffffff;
             margin-bottom: 3rem;
         }
         
         /* Cards de servicios */
         .service-card {
-            background: white;
+            background: #0a0a0a;
             border-radius: 15px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.08);
             transition: all 0.3s ease;
             margin-bottom: 2rem;
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         
         .service-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            box-shadow: 0 0 20px rgba(41, 121, 255, 0.2);
+            border-color: #2979ff;
         }
         
         .service-header {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            background: linear-gradient(135deg, #111 0%, #000 100%);
             color: white;
             padding: 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
         
         .service-name {
@@ -131,7 +136,7 @@
         }
         
         .service-description {
-            color: #6b7280;
+            color: #9ca3af;
             font-size: 0.95rem;
             line-height: 1.6;
             margin-bottom: 1rem;
@@ -146,24 +151,25 @@
         .detail-item {
             display: flex;
             align-items: center;
-            color: #374151;
+            color: #e5e7eb;
             font-size: 0.9rem;
         }
         
         .detail-item i {
-            color: #059669;
+            color: #2979ff;
             width: 20px;
             margin-right: 0.5rem;
         }
         
         .price-tag {
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            background: rgba(41, 121, 255, 0.1);
             color: white;
             padding: 0.5rem 1rem;
             border-radius: 25px;
             font-weight: 600;
             text-align: center;
             margin-top: 1rem;
+            border: 1px solid rgba(41, 121, 255, 0.3);
         }
         
         /* Loading y Estados */

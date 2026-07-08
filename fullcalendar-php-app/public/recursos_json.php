@@ -4,8 +4,8 @@ require_once("../../includes/db.php");
 header('Content-Type: application/json');
 
 // Consulta simplificada para obtener modalidades
-$sql = "SELECT id, nombre as title FROM modalidades 
-        ORDER BY 
+$sql = "SELECT id, nombre as title FROM agenda_modalidades 
+        ORDER BY
         CASE 
             WHEN nombre LIKE '%Radiografía%' THEN 1
             WHEN nombre LIKE '%Resonancia%' THEN 2

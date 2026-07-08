@@ -1438,6 +1438,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
                             style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;resize:vertical;" 
                             placeholder="Notas internas para el personal médico..."></textarea>
                 </div>
+                <div>
+                    <label class="form-check-label">
+                        <input type="checkbox" id="agendarAtencionEspecial" name="atencion_especial" style="margin-right: 8px;">
+                        Requiere asistencia especial (silla de ruedas, etc.)
+                    </label>
+                </div>
               </div>
             </div>
           </div>
@@ -1979,6 +1985,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           var telefono = event.extendedProps.telefono || '';
           var diagnostico = event.extendedProps.diagnostico || '';
           var pago = event.extendedProps.pago || 'No pagado';
+          var atencionEspecial = event.extendedProps.atencion_especial == '1';
           var estadoActual = event.extendedProps.estado || '';
           
           // Definir todos los estados y sus colores
@@ -2009,6 +2016,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           var tooltip = `
             <div style='font-family:Inter,sans-serif;max-width:280px;background:white;'>
               <div style='font-weight:bold;font-size:16px;color:#1275a0;margin-bottom:8px;'>${paciente}</div>
+              ${atencionEspecial ? `
+                <div style='background:#fef2f2;color:#991b1b;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:500;margin-bottom:8px;'>
+                  <i class="fas fa-wheelchair" style="margin-right:6px;"></i> Requiere Asistencia Especial
+                </div>
+              ` : ''}
               <div style='margin-bottom:6px;color:#374151;font-weight:500;'>${servicio}</div>
               <div style='font-size:14px;color:#6b7280;margin-bottom:4px;'><span style='margin-right:8px;'>🕒</span>${horaInicio} - ${horaFin}</div>
               <div style='font-size:14px;color:#6b7280;margin-bottom:4px;'><span style='margin-right:8px;'>💲</span>${pago}</div>
@@ -2104,6 +2116,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
           info.el.addEventListener('mouseleave', function() {
             info.el._hideTimeout = setTimeout(function() {
               if (info.el._fcTooltip && tooltipActivo === info.el._fcTooltip) {
+                // Prevenir error si el tooltip ya fue removido por otra acción
+                if (info.el._fcTooltip.parentNode) {
+                    document.body.removeChild(info.el._fcTooltip);
+                }
                 document.body.removeChild(info.el._fcTooltip);
                 info.el._fcTooltip = null;
                 tooltipActivo = null;
@@ -2111,6 +2127,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             }, 300);
           });
               <div style='margin-bottom:6px;color:#374151;font-weight:500;'>${servicio}</div>
+              ${atencionEspecial ? `
+                <div style='background:#fef2f2;color:#991b1b;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:500;margin-bottom:8px;'>
+                  <i class="fas fa-wheelchair" style="margin-right:6px;"></i> Requiere Asistencia Especial
+                </div>
+              ` : ''}
               <div style='font-size:14px;color:#6b7280;margin-bottom:4px;'><span style='margin-right:8px;'>🕒</span>${horaInicio} - ${horaFin}</div>
               <div style='font-size:14px;color:#6b7280;margin-bottom:4px;'><span style='margin-right:8px;'>💲</span>${pago}</div>
               <div class='estado-puntos' style='margin:8px 0;'>
@@ -2198,6 +2219,10 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             info.el._hideTimeout = setTimeout(function() {
               if (info.el._fcTooltip && tooltipActivo === info.el._fcTooltip) {
                 document.body.removeChild(info.el._fcTooltip);
+                // Prevenir error si el tooltip ya fue removido por otra acción
+                if (info.el._fcTooltip.parentNode) {
+                    document.body.removeChild(info.el._fcTooltip);
+                }
                 info.el._fcTooltip = null;
                 tooltipActivo = null;
               }
@@ -2472,6 +2497,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         var estadoId = document.getElementById('agendarEstado').value;
         var notaInterna = document.getElementById('notaInterna').value;
         var notaPaciente = document.getElementById('notaPaciente').value;
+        var atencionEspecial = document.getElementById('agendarAtencionEspecial').checked ? 1 : 0;
 
         if (!pacienteId) {
           alert('Selecciona o registra un paciente antes de agendar la cita.');
@@ -2490,6 +2516,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         formData.append('tipo', '');
         formData.append('nota_interna', notaInterna);
         formData.append('nota_paciente', notaPaciente);
+        formData.append('atencion_especial', atencionEspecial);
         fetch('guardar_cita.php', {
           method: 'POST',
           body: formData

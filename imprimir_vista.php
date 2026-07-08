@@ -11,7 +11,7 @@ $params[] = $fecha;
 
 afterTrim:
 if ($modalidad !== 'all') {
-    $where .= " AND (c.modalidad_id = ? OR s.modalidad = ?)";
+    $where .= " AND (c.modalidad_id = ? OR s.modalidad_id = ?)";
     $params[] = $modalidad;
     $params[] = $modalidad;
 }

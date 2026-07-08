@@ -1,16 +1,17 @@
 <?php
 session_start();
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/db.php';
 
 header('Content-Type: application/json');
 
-if (!puedeRealizar('gestionar_usuarios')) {
+if (!puedeRealizar('gestionar_modalidades')) {
     http_response_code(403);
     echo json_encode(['success'=>false,'error'=>'Acceso denegado']);
     exit;
 }
 
+$usuario_id = $_SESSION['usuario_id'];
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success'=>false,'error'=>'Método no permitido']);
@@ -65,13 +66,13 @@ if ($store_db) {
         exit;
     }
 
-    $stmt = $conn->prepare("UPDATE agenda_modalidades SET imagen = ? WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE agenda_modalidades SET imagen = ? WHERE id = ? AND usuario_id = ?");
     if (!$stmt) {
         http_response_code(500);
         echo json_encode(['success'=>false,'error' => 'Error al preparar la consulta: ' . $conn->error]);
         exit;
     }
-    $stmt->bind_param('si', $relpath, $modalidad_id);
+    $stmt->bind_param('sii', $relpath, $modalidad_id, $usuario_id);
     if (!$stmt->execute()) {
         http_response_code(500);
         echo json_encode(['success'=>false,'error'=>'Error al actualizar DB: '.$stmt->error]);

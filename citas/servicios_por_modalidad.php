@@ -2,7 +2,8 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-require_once("../includes/db.php");
+session_start();
+require_once __DIR__ . "/../includes/db.php";
 header('Content-Type: application/json');
 
         $servicios = []; // Initialize $servicios to an empty array
@@ -11,6 +12,8 @@ header('Content-Type: application/json');
 
         try {
 
+            $usuario_id = $_SESSION['usuario_id'] ?? null;
+            $usuario_tipo = $_SESSION['usuario_tipo'] ?? 'usuario';
             $modalidad_id = isset($_GET['modalidad_id']) ? intval($_GET['modalidad_id']) : 0;
 
     
@@ -20,46 +23,47 @@ header('Content-Type: application/json');
                 throw new Exception("Modalidad ID no proporcionado o inválido.");
 
             }
+            
+            if (!$usuario_id) {
+                throw new Exception("Sesión de usuario no válida.");
+            }
 
     
 
             // Consulta para obtener servicios basado en modalidad_id directamente de portal_servicios
-
-            $sql = "SELECT id, nombre FROM portal_servicios WHERE modalidad = ?";
-
-            $stmt = $conn->prepare($sql);
-
             
-
-            if ($stmt === false) {
-
+            if ($usuario_tipo === 'superadmin' || $usuario_tipo === 'admin') {
+                $sql = "SELECT id, nombre, descripcion, precio, duracion_minutos FROM portal_servicios WHERE modalidad_id = ? ORDER BY nombre ASC";
+            } else {
+                $sql = "SELECT id, nombre, descripcion, precio, duracion_minutos FROM portal_servicios WHERE modalidad_id = ? AND usuario_id = ? ORDER BY nombre ASC";
+            }
+            
+            $stmt = $conn->prepare($sql);            if ($stmt === false) {
                 throw new Exception("Error al preparar la consulta: " . $conn->error);
 
             }
 
-            
-
-            $stmt->bind_param("i", $modalidad_id);
-
+            if ($usuario_tipo === 'superadmin' || $usuario_tipo === 'admin') {
+                $stmt->bind_param("i", $modalidad_id);
+            } else {
+                $stmt->bind_param("ii", $modalidad_id, $usuario_id);
+            }
             $stmt->execute();
-
-            $stmt->bind_result($id, $nombre);
-
+            $stmt->bind_result($id, $nombre, $descripcion, $precio, $duracion);
             
 
             while ($stmt->fetch()) {
 
                 $servicios[] = [
-
                     'id' => $id,
-
                     'nombre' => $nombre,
-
-                    'duracion_minutos' => null // Temporarily set to null as duracion is removed
-
+                    'descripcion' => $descripcion,
+                    'precio' => $precio,
+                    'duracion_minutos' => $duracion
                 ];
 
             }
+            $stmt->close();
 
             echo json_encode($servicios);
 

@@ -7,33 +7,25 @@
 
 $show_calendar = $show_calendar ?? true;
 $show_back = $show_back ?? false;
-$show_admin_tools = $show_admin_tools ?? ($puede_gestionar_usuarios ?? false);
+$show_admin_tools = $show_admin_tools ?? (in_array($_SESSION['usuario_tipo'] ?? '', ['admin', 'superadmin', 'dentista', 'recepcion']));
 // Allow pages to hide the mobile menu button when the header would overlap content
 $show_mobile_menu = $show_mobile_menu ?? true;
 ?>
 <!-- Header -->
 <header class="main-header">
     <div class="header-left">
-        <?php if ($show_mobile_menu): ?>
-        <button class="mobile-menu-btn" onclick="if(window.toggleSidebar) toggleSidebar();">
-            <i class="fas fa-bars"></i>
-        </button>
-        <?php endif; ?>
 
         <div class="header-logo">
-            <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles">
-        </div>
-
-        <div class="user-info">
-            <i class="fas fa-user-circle"></i>
-            <span><?php echo htmlspecialchars($user_nombre ?? 'Usuario'); ?></span>
-            <span class="user-type">(<?php echo ucfirst($user_tipo ?? 'usuario'); ?>)</span>
+            <img src="images/Xolai.png" alt="Xolai Logo" class="header-logo-img">
+            <span class="header-title" style="color:white; font-size:24px; font-weight:700; margin-left:10px;">Xolai</span>
         </div>
     </div>
 
-    <div class="logo-section">
-        <div class="logo-text">IMAGENOLOGÍA</div>
-    </div>
+    <nav class="header-center">
+        <a href="home.php" class="nav-link" style="color:#a0a0a0; margin:0 10px;">Inicio</a>
+        <a href="index.php" class="nav-link" style="color:#a0a0a0; margin:0 10px;">Agenda</a>
+        <a href="panel_admin.php" class="nav-link" style="color:#a0a0a0; margin:0 10px;">Administración</a>
+    </nav>
 
     <div class="header-right">
         <div class="header-buttons">
@@ -41,7 +33,17 @@ $show_mobile_menu = $show_mobile_menu ?? true;
                 <a href="panel_admin.php" class="btn-header"><i class="fas fa-users-cog"></i> Admin</a>
             <?php endif; ?>
 
-            <a href="reporte.php" class="btn-header"><i class="fas fa-file-alt"></i> Reporte</a>
+            <?php if (puedeRealizar('ver_catalogo_pacientes')): ?>
+                <a href="catalogo_pacientes.php" class="btn-header"><i class="fas fa-hospital-user"></i> Pacientes</a>
+            <?php endif; ?>
+
+            <?php if (puedeRealizar('ver_catalogo_citas')): ?>
+                <a href="catalogo_citas.php" class="btn-header"><i class="fas fa-calendar-check"></i> Citas</a>
+            <?php endif; ?>
+
+            <?php if (puedeRealizar('acceder_reportes')): ?>
+                <a href="reporte.php" class="btn-header"><i class="fas fa-file-alt"></i> Reporte</a>
+            <?php endif; ?>
 
             <?php if ($show_calendar): ?>
                 <a href="index.php" class="btn-header"><i class="fas fa-calendar"></i> Calendario</a>

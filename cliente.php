@@ -1,7 +1,9 @@
 <?php
 session_start();
 // Incluir configuración de la base de datos
-require_once 'includes/db_config.php';
+require_once 'includes/db.php';
+
+$medico_asignado_id = isset($_GET['medico_id']) ? (int)$_GET['medico_id'] : 0;
 
 // Si se recibe un ID de usuario del portal, buscar sus datos y guardarlos en sesión
 if (isset($_GET['portal_usuario_id']) && !empty($_GET['portal_usuario_id'])) {
@@ -12,7 +14,7 @@ if (isset($_GET['portal_usuario_id']) && !empty($_GET['portal_usuario_id'])) {
     if (!isset($_SESSION['portal_paciente_data']) || !isset($_SESSION['portal_paciente_data']['lookup_portal_id']) || $_SESSION['portal_paciente_data']['lookup_portal_id'] !== $portal_usuario_id) {
         
         // 🔹 CORREGIDO: Buscar por la columna portal_usuario_id en la tabla portal_pacientes
-        $sql = "SELECT id, nombre, apellido, telefono, correo, fecha_nacimiento FROM portal_pacientes WHERE portal_usuario_id = ?";
+        $sql = "SELECT id, nombre, apellido, telefono, correo, fecha_nacimiento, usuario_id FROM portal_pacientes WHERE portal_usuario_id = ?";
         $stmt = $conn->prepare($sql);
 
         if ($stmt === false) {
@@ -23,7 +25,7 @@ if (isset($_GET['portal_usuario_id']) && !empty($_GET['portal_usuario_id'])) {
             $stmt->execute();
             
             // Usar bind_result para compatibilidad
-            $stmt->bind_result($paciente_id, $nombre, $apellido, $telefono, $correo, $fecha_nacimiento);
+            $stmt->bind_result($paciente_id, $nombre, $apellido, $telefono, $correo, $fecha_nacimiento, $usuario_id_medico);
 
             if ($stmt->fetch()) {
                 // Guardar datos en sesión
@@ -33,8 +35,13 @@ if (isset($_GET['portal_usuario_id']) && !empty($_GET['portal_usuario_id'])) {
                     'nombre_completo'  => trim($nombre . ' ' . $apellido),
                     'telefono'         => $telefono ?? '',
                     'email'            => $correo ?? '',
-                    'fecha_nacimiento' => $fecha_nacimiento ? date('Y-m-d', strtotime($fecha_nacimiento)) : ''
+                    'fecha_nacimiento' => $fecha_nacimiento ? date('Y-m-d', strtotime($fecha_nacimiento)) : '',
+                    'medico_id'        => $usuario_id_medico // Guardamos el ID del médico asignado
                 ];
+                
+                // Si encontramos al médico asociado al paciente, lo usamos para filtrar la tienda
+                if ($usuario_id_medico) $medico_asignado_id = $usuario_id_medico;
+                
                 error_log("Paciente encontrado en sesión - Portal Usuario ID: {$portal_usuario_id}, Paciente ID: {$paciente_id}");
             } else {
                 unset($_SESSION['portal_paciente_data']);
@@ -43,6 +50,9 @@ if (isset($_GET['portal_usuario_id']) && !empty($_GET['portal_usuario_id'])) {
             $stmt->close();
         }
     }
+} elseif (isset($_SESSION['portal_paciente_data']['medico_id']) && $medico_asignado_id == 0) {
+    // Recuperar médico de la sesión si ya estaba logueado y no vino por GET
+    $medico_asignado_id = $_SESSION['portal_paciente_data']['medico_id'];
 }
 
 // Cerrar la conexión solo si fue establecida exitosamente
@@ -55,7 +65,7 @@ if ($conn && $conn instanceof mysqli) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital Angeles - Servicios de Imagenología</title>
+    <title>Sistema de Gestión de Citas - Consultorio Médico San José</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -66,44 +76,91 @@ if ($conn && $conn instanceof mysqli) {
     
     <style>
         :root {
-            --primary-color: #1f2937;
-            --secondary-color: #3b82f6;
-            --accent-color: #0f5f85;
-            --gradient-bg: linear-gradient(135deg, #0f5f85, #1f2937);
-            --light-bg: #f8fafc;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --primary-color: #ffffff;
+            --secondary-color: #a0a0a0;
+            --accent-color: #2979ff;
+            --gradient-bg: #000000;
+            --light-bg: #000000;
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
 
         body {
             font-family: 'Inter', sans-serif;
             line-height: 1.6;
-            color: #374151;
+            color: #e5e7eb;
             background: var(--light-bg);
-            padding-top: 80px;
+            padding-top: 0;
         }
 
         /* Navigation */
-        .navbar {
-            background: var(--gradient-bg);
-            box-shadow: var(--card-shadow);
-            padding: 1rem 0;
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            color: white !important;
-            text-decoration: none;
-        }
-
-        .logo-text {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-left: 10px;
+        .main-header {
+            background: rgba(10, 10, 10, 0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             color: white;
+            height: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+        }
+        
+        .header-left, .header-center, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+    .header-left { flex: 1; justify-content: flex-start; }
+        .header-center { flex: 2; justify-content: center; }
+        .header-right { flex: 1; justify-content: flex-end; }
+
+        .header-logo-img {
+            height: 45px;
+            width: auto;
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.1)) brightness(1.1);
+        }
+        
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 1px;
+        }
+
+        .logo-section-center {
+            text-align: center;
         }
 
         .nav-link {
-            color: rgba(255, 255, 255, 0.9) !important;
+            color: #a0a0a0 !important;
+            font-weight: 500;
+            font-size: 15px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            color: white !important;
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .contact-info-header {
+            font-size: 12px;
+            color: #9ca3af;
+            text-align: right;
+            line-height: 1.4;
+            margin-right: 15px;
+
+            }
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
             font-weight: 500;
             padding: 0.5rem 1rem;
             border-radius: 8px;
@@ -112,16 +169,17 @@ if ($conn && $conn instanceof mysqli) {
 
         .nav-link:hover {
             color: white !important;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(100, 100, 100, 0.15);
         }
 
         /* Hero Section */
         .hero {
-            background: var(--gradient-bg);
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
             color: white;
-            padding: 100px 0;
+            padding: 140px 0 100px 0;
             text-align: center;
-            margin-top: -80px;
+            margin-top: 0;
+            border-bottom: 1px solid rgba(41, 121, 255, 0.1);
         }
 
         .hero h1 {
@@ -149,20 +207,20 @@ if ($conn && $conn instanceof mysqli) {
         .section-title h2 {
             font-size: 2.5rem;
             font-weight: 700;
-            color: var(--primary-color);
+            color: #ffffff;
             margin-bottom: 1rem;
         }
 
         .section-title p {
             font-size: 1.1rem;
-            color: #6b7280;
+            color: #9ca3af;
             max-width: 600px;
             margin: 0 auto;
         }
 
         /* Service Cards */
         .service-card {
-            background: white;
+            background: #0a0a0a;
             border-radius: 20px;
             padding: 2rem;
             text-align: center;
@@ -170,12 +228,13 @@ if ($conn && $conn instanceof mysqli) {
             transition: all 0.3s ease;
             cursor: pointer;
             height: 100%;
-            border: 2px solid transparent;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .service-card:hover {
             transform: translateY(-5px);
             border-color: var(--accent-color);
+            box-shadow: 0 0 20px rgba(41, 121, 255, 0.2);
         }
 
         .service-icon {
@@ -188,33 +247,36 @@ if ($conn && $conn instanceof mysqli) {
             margin: 0 auto 1.5rem;
             color: white;
             font-size: 2rem;
+            background: linear-gradient(135deg, #111 0%, #222 100%);
+            border: 1px solid rgba(41, 121, 255, 0.3);
         }
 
         .service-card h3 {
             font-size: 1.5rem;
             font-weight: 600;
-            color: var(--primary-color);
+            color: #ffffff;
             margin-bottom: 1rem;
         }
 
         .service-card p {
-            color: #6b7280;
+            color: #9ca3af;
             margin-bottom: 1.5rem;
         }
 
         .service-count {
-            background: #f8fafc;
+            background: rgba(41, 121, 255, 0.1);
             padding: 0.5rem 1rem;
             border-radius: 50px;
             font-size: 0.9rem;
             color: var(--accent-color);
             font-weight: 600;
             display: inline-block;
+            border: 1px solid rgba(41, 121, 255, 0.2);
         }
 
         /* Package Cards */
         .package-card {
-            background: white;
+            background: #0a0a0a;
             border-radius: 20px;
             padding: 2rem;
             text-align: center;
@@ -222,12 +284,13 @@ if ($conn && $conn instanceof mysqli) {
             transition: all 0.3s ease;
             cursor: pointer;
             height: 100%;
-            border: 2px solid #e5e7eb;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .package-card:hover {
             transform: translateY(-5px);
             border-color: var(--accent-color);
+            box-shadow: 0 0 20px rgba(41, 121, 255, 0.2);
         }
 
         /* Animations */
@@ -254,11 +317,15 @@ if ($conn && $conn instanceof mysqli) {
             padding: 0.875rem 2rem;
             font-weight: 600;
             transition: all 0.3s ease;
+            color: white;
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.3);
         }
 
         .btn-primary:hover {
-            background: #0a4a6a;
+            background: #2962ff;
             transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(41, 121, 255, 0.6);
+            color: white;
         }
 
         .btn-outline-light {
@@ -266,6 +333,13 @@ if ($conn && $conn instanceof mysqli) {
             padding: 0.875rem 2rem;
             font-weight: 600;
             transition: all 0.3s ease;
+            border: 2px solid white;
+            color: white;
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
         }
 
         /* Responsive */
@@ -289,62 +363,46 @@ if ($conn && $conn instanceof mysqli) {
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="#">
-                <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles" height="60">
-                <div class="logo-text">IMAGENOLOGÍA</div>
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    style="border: none; background: none; color: white;">
-                <i class="fas fa-bars" style="color: white; font-size: 1.5rem;"></i>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#servicios">
-                            <i class="fas fa-stethoscope me-1"></i>Servicios
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#paquetes">
-                            <i class="fas fa-box me-1"></i>Paquetes
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="contacto.php">
-                            <i class="fas fa-phone me-1"></i>Contacto
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.php">
-                            <i class="fas fa-calendar me-1"></i>Admin
-                        </a>
-                    </li>
-                </ul>
+     <!-- Header Mejorado (Estilo index.php) -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="header-logo">
+                <img src="images/Xolai.png" alt="Xolai Logo" class="header-logo-img">
+                <span class="header-title">Xolai</span>
             </div>
         </div>
-    </nav>
+        
+        <div class="header-center">
+            <div class="logo-section-center">
+                <div class="header-title">SISTEMA DE GESTIÓN DE CITAS</div>
+            </div>
+        </div>
+        
+        <div class="header-right">
+            <div class="contact-info-header d-none d-md-block">
+                <div><i class="fas fa-map-marker-alt me-1"></i> Calle 12 335, entre guerrero y rayón, Zona Centro, 31500 Cuauhtémoc, Chih.</div>
+                <div><i class="fas fa-phone me-1"></i> +52 625 125 70 48</div>
+            </div>
+            <nav class="d-flex">
+                <a href="#servicios" class="nav-link">Servicios</a>
+                <a href="#paquetes" class="nav-link">Paquetes</a>
+            </nav>
+        </div>
+    </header>
 
     <!-- Hero Section -->
     <section class="hero">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-8">
-                    <h1 class="fade-in">Servicios de Imagenología</h1>
-                    <p class="fade-in">Tecnología de vanguardia para diagnósticos precisos con el más alto estándar de calidad</p>
+                    <h1 class="fade-in">Dent Clínica de especialidades Dentales</h1>
+                    <p class="fade-in">Tu salud es nuestra prioridad. Agenda citas y consultas con la mejor tecnología y atención.</p>
                     <div class="fade-in">
                         <a href="#servicios" class="btn btn-primary btn-lg px-4 py-3 me-3" 
                            style="border-radius: 50px; font-weight: 600;">
                             <i class="fas fa-calendar-alt me-2"></i>Reservar Cita
                         </a>
-                        <a href="contacto.php" class="btn btn-outline-light btn-lg px-4 py-3" 
-                           style="border-radius: 50px; font-weight: 600;">
-                            <i class="fas fa-phone me-2"></i>Contacto
-                        </a>
+                        
                     </div>
                 </div>
             </div>
@@ -355,18 +413,18 @@ if ($conn && $conn instanceof mysqli) {
     <section id="servicios" class="services-section">
         <div class="container">
             <div class="section-title">
-                <h2>Nuestros Servicios</h2>
-                <p>Selecciona la modalidad de estudio que necesitas y agenda tu cita de manera fácil y rápida</p>
+                <h2>Catálogo de Servicios</h2>
+                <p>Selecciona el estudio que necesitas y agenda tu cita de manera fácil y rápida</p>
             </div>
 
-            <div class="row" id="modalidades-grid">
-                <!-- Las modalidades se cargarán dinámicamente aquí -->
+            <div class="row" id="servicios-grid">
+                <!-- Los servicios se cargarán dinámicamente aquí -->
             </div>
         </div>
     </section>
 
     <!-- Packages Section -->
-    <section id="paquetes" class="services-section" style="background: white;">
+    <section id="paquetes" class="services-section" style="background: #050505;">
         <div class="container">
             <div class="section-title">
                 <h2>Paquetes Especiales</h2>
@@ -394,39 +452,37 @@ if ($conn && $conn instanceof mysqli) {
     </section>
 
     <!-- Footer -->
-    <footer style="background: var(--gradient-bg); color: white; padding: 40px 0; margin-top: 60px;">
+    <footer style="background: #000000; color: white; padding: 40px 0; margin-top: 60px; border-top: 1px solid rgba(41, 121, 255, 0.1);">
         <div class="container">
             <div class="row">
                 <div class="col-lg-6">
                     <div class="d-flex align-items-center mb-3">
-                        <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" 
-                             alt="Hospital Angeles" height="50" class="me-3">
+                        <img src="images/Xolai.png" alt="Xolai Logo" height="45" class="me-3">
                         <div>
-                            <h5 style="margin: 0; font-weight: 700;">Hospital Angeles</h5>
-                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">Imagenología</p>
+                            <h5 style="margin: 0; font-weight: 700;"> </h5>
+                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">Atención Dental Integral</p>
                         </div>
                     </div>
                     <p style="opacity: 0.9; margin-bottom: 0;">
-                        Tecnología de vanguardia para diagnósticos precisos con el más alto estándar de calidad médica.
+                        Comprometidos con la excelencia y la agilidad en la gestión de tu salud a través de nuestro sistema de citas.
                     </p>
                 </div>
                 <div class="col-lg-6 text-lg-end">
                     <h6 style="font-weight: 600; margin-bottom: 15px;">Contáctanos</h6>
                     <p style="margin: 5px 0; opacity: 0.9;">
-                        <i class="fas fa-phone me-2"></i>+52 (55) 1234-5678
+                        <i class="fas fa-phone me-2"></i>+52 625 125 70 48
+
                     </p>
+                    
                     <p style="margin: 5px 0; opacity: 0.9;">
-                        <i class="fas fa-envelope me-2"></i>contacto@hospitalangeles.com
-                    </p>
-                    <p style="margin: 5px 0; opacity: 0.9;">
-                        <i class="fas fa-map-marker-alt me-2"></i>Ciudad de México, México
+                        <i class="fas fa-map-marker-alt me-2"></i>Calle 12 335, entre guerrero y rayón, Zona Centro, 31500 Cuauhtémoc, Chih.
                     </p>
                 </div>
             </div>
             <hr style="border-color: rgba(255,255,255,0.2); margin: 30px 0 20px;">
             <div class="text-center" style="opacity: 0.8;">
                 <p style="margin: 0; font-size: 0.9rem;">
-                    © 2025 Hospital Angeles - Todos los derechos reservados
+                    © 2026 Dent Clínica de especialidades Dentales - Todos los derechos reservados
                 </p>
             </div>
         </div>
@@ -436,24 +492,27 @@ if ($conn && $conn instanceof mysqli) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // ID del médico para filtrar (inyectado desde PHP)
+        const medicoFiltroId = <?php echo json_encode($medico_asignado_id); ?>;
+
         // Colores para las modalidades
         const modalidadColors = {
-            'radiografia': 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-            'tomografia': 'linear-gradient(135deg, #f59e0b, #d97706)',
-            'mastografia': 'linear-gradient(135deg, #ec4899, #db2777)',
-            'sonografia': 'linear-gradient(135deg, #06b6d4, #0891b2)',
-            'laboratorios': 'linear-gradient(135deg, #10b981, #059669)',
-            'default': 'linear-gradient(135deg, #6b7280, #4b5563)'
+            'radiograf': 'linear-gradient(135deg, #1a1a1a, #333)',
+            'tomografia': 'linear-gradient(135deg, #1a1a1a, #333)',
+            'mastografia': 'linear-gradient(135deg, #1a1a1a, #333)',
+            'sonografia': 'linear-gradient(135deg, #1a1a1a, #333)',
+            'laboratorio': 'linear-gradient(135deg, #1a1a1a, #333)',
+            'default': 'linear-gradient(135deg, #1a1a1a, #333)'
         };
 
         // Iconos para las modalidades
         const modalidadIcons = {
-            'radiografia': 'fas fa-x-ray',
-            'resonancia': 'fas fa-brain', 
-            'tomografia': 'fas fa-lungs',
-            'mastografia': 'fas fa-heartbeat',
-            'sonografia': 'fas fa-baby',
-            'laboratorios': 'fas fa-flask',
+            'radiograf': 'fas fa-diagnoses', // Nuevo ícono para Radiología
+            'resonancia': 'fas fa-brain',
+            'tomograf': 'fas fa-lungs-virus', // Un ícono más representativo para tomografía
+            'mastograf': 'fas fa-venus', // Nuevo ícono para Mastografía
+            'sonograf': 'fas fa-wave-square', // Ícono para Sonografía/Ultrasonido
+            'laboratorio': 'fas fa-flask',
             'default': 'fas fa-stethoscope'
         };
 
@@ -471,6 +530,10 @@ if ($conn && $conn instanceof mysqli) {
         // Función para obtener ícono de modalidad
         function getModalidadIcon(nombre) {
             const nombreLower = nombre.toLowerCase();
+            // Casos especiales para cubrir múltiples nombres
+            if (nombreLower.includes('ultrasonido')) return modalidadIcons['sonograf'];
+            if (nombreLower.includes('radiolog')) return modalidadIcons['radiograf'];
+
             for (const [key, icon] of Object.entries(modalidadIcons)) {
                 if (nombreLower.includes(key)) {
                     return icon;
@@ -479,33 +542,50 @@ if ($conn && $conn instanceof mysqli) {
             return modalidadIcons.default;
         }
 
-        // Cargar modalidades
-        async function cargarModalidades() {
+        // Cargar SERVICIOS directamente (Reemplaza a cargarModalidades)
+        async function cargarServicios() {
             try {
-                const response = await fetch('recursos_json.php');
-                const modalidades = await response.json();
+                // Usamos el nuevo endpoint publico, pasando el ID del médico si existe
+                let url = 'servicios_publicos.php';
+                if (medicoFiltroId > 0) {
+                    url += `?medico_id=${medicoFiltroId}`;
+                }
                 
-                const grid = document.getElementById('modalidades-grid');
+                const response = await fetch(url);
+                const servicios = await response.json();
                 
-                for (const modalidad of modalidades) {
-                    // Obtener servicios de esta modalidad
-                    const serviciosResponse = await fetch(`citas/servicios_por_modalidad.php?modalidad_id=${modalidad.id}`);
-                    const servicios = await serviciosResponse.json();
+                const grid = document.getElementById('servicios-grid');
+                grid.innerHTML = '';
+
+                if (servicios.length === 0) {
+                    grid.innerHTML = '<div class="col-12 text-center text-muted">No hay servicios disponibles por el momento.</div>';
+                    return;
+                }
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const portalUsuarioId = urlParams.get('portal_usuario_id');
+                
+                for (const servicio of servicios) {
+                    const color = getModalidadColor(servicio.modalidad_nombre || 'default');
+                    const icon = getModalidadIcon(servicio.modalidad_nombre || 'default');
+                    const precioFormatted = servicio.precio ? `$${parseFloat(servicio.precio).toLocaleString('es-MX')}` : 'Consultar';
                     
-                    const color = getModalidadColor(modalidad.title);
-                    const icon = getModalidadIcon(modalidad.title);
+                    // Construir enlace de reserva directo para el servicio
+                    let reservarUrl = `reservar.php?tipo=servicio&servicio_id=${servicio.id}&servicio_nombre=${encodeURIComponent(servicio.nombre)}&modalidad_id=${servicio.modalidad_id || ''}`;
+                    if (portalUsuarioId) reservarUrl += `&portal_usuario_id=${portalUsuarioId}`;
+                    if (medicoFiltroId > 0) reservarUrl += `&medico_id=${medicoFiltroId}`;
                     
                     const card = document.createElement('div');
                     card.className = 'col-lg-4 col-md-6 mb-4';
                     card.innerHTML = `
-                        <div class="service-card fade-in" onclick="verModalidad(${modalidad.id}, '${modalidad.title.replace(/'/g, "\\'")}')">
+                        <div class="service-card fade-in" onclick="window.location.href='${reservarUrl}'">
                             <div class="service-icon" style="background: ${color};">
-                                <i class="${icon}"></i>
+                                <i class="${icon}" style="color: #2979ff; text-shadow: 0 0 10px rgba(41, 121, 255, 0.5);"></i>
                             </div>
-                            <h3>${modalidad.title}</h3>
-                            <p>Estudios especializados con equipos de última generación</p>
-                            <div class="service-count">
-                                ${servicios.length} servicio${servicios.length !== 1 ? 's' : ''} disponible${servicios.length !== 1 ? 's' : ''}
+                            <h3>${servicio.nombre}</h3>
+                            <p>${servicio.descripcion || servicio.modalidad_nombre || 'Estudio de imagenología'}</p>
+                            <div class="service-count" style="color: #2979ff; border-color: #2979ff;">
+                                ${precioFormatted}
                             </div>
                         </div>
                     `;
@@ -513,51 +593,51 @@ if ($conn && $conn instanceof mysqli) {
                 }
             } catch (error) {
                 console.error('Error cargando modalidades:', error);
+                document.getElementById('servicios-grid').innerHTML = '<div class="col-12 text-center text-danger">Error cargando servicios.</div>';
             }
         }
 
-        // Cargar paquetes (simulado por ahora)
-        function cargarPaquetes() {
-            const paquetes = [
-                {
-                    nombre: 'Paquete Básico',
-                    descripcion: 'Estudios esenciales para chequeo general',
-                    servicios: ['Radiografía de Tórax', 'Análisis de Sangre', 'Electrocardiograma'],
-                    precio: '$2,500'
-                },
-                {
-                    nombre: 'Paquete Completo',
-                    descripcion: 'Evaluación integral con múltiples estudios',
-                    servicios: ['Resonancia Magnética', 'Tomografía', 'Ultrasonido', 'Laboratorios'],
-                    precio: '$8,500'
-                },
-                {
-                    nombre: 'Paquete Premium',
-                    descripcion: 'Lo más completo en diagnóstico por imagen',
-                    servicios: ['Todos los estudios disponibles', 'Consulta especializada', 'Seguimiento'],
-                    precio: '$12,500'
-                }
-            ];
-
+        // Cargar paquetes desde la base de datos
+        async function cargarPaquetes() {
             const grid = document.getElementById('paquetes-grid');
-            
-            paquetes.forEach((paquete, index) => {
-                const card = document.createElement('div');
-                card.className = 'col-lg-4 col-md-6 mb-4';
-                card.innerHTML = `
-                    <div class="package-card fade-in" onclick="verPaquete('${paquete.nombre}')" style="animation-delay: ${index * 0.1}s">
-                        <div class="service-icon">
-                            <i class="fas fa-gift"></i>
+            grid.innerHTML = ''; // Limpiar el grid
+
+            try {
+                let url = 'citas/paquetes_json.php';
+                if (medicoFiltroId > 0) {
+                    url += `?medico_id=${medicoFiltroId}`;
+                }
+                
+                const response = await fetch(url);
+                const paquetes = await response.json();
+
+                if (!Array.isArray(paquetes) || paquetes.length === 0) {
+                    grid.innerHTML = '<div class="col-12 text-center"><p>No hay paquetes especiales disponibles por el momento.</p></div>';
+                    return;
+                }
+
+                paquetes.forEach((paquete, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'col-lg-4 col-md-6 mb-4';
+                    card.innerHTML = `
+                        <div class="package-card fade-in" onclick="verPaquete(${paquete.id})" style="animation-delay: ${index * 0.1}s;">
+                            <div class="service-icon" style="background: #1a1a1a; border: 1px solid rgba(41, 121, 255, 0.3);">
+                                <i class="fas fa-gift" style="color: #2979ff; text-shadow: 0 0 10px rgba(41, 121, 255, 0.5);"></i>
+                            </div>
+                            <h3>${paquete.nombre}</h3>
+                            <p>${paquete.descripcion || 'Paquete de estudios especializados.'}</p>
+                            <div class="service-count">
+                                Desde $${parseFloat(paquete.precio).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            </div>
                         </div>
-                        <h3>${paquete.nombre}</h3>
-                        <p>${paquete.descripcion}</p>
-                        <div class="service-count">
-                            Desde ${paquete.precio}
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
+                    `;
+                    grid.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error('Error cargando paquetes:', error);
+                grid.innerHTML = '<div class="col-12 text-center"><p class="text-danger">Error al cargar los paquetes.</p></div>';
+            }
         }
 
         // Cargar citas del cliente
@@ -598,7 +678,7 @@ if ($conn && $conn instanceof mysqli) {
                     const card = document.createElement('div');
                     card.className = 'col-lg-6 col-md-12 mb-4';
                     card.innerHTML = `
-                        <div class="card shadow-sm fade-in" style="animation-delay: ${index * 0.1}s;">
+                        <div class="card shadow-sm fade-in" style="animation-delay: ${index * 0.1}s; background: #0a0a0a; border: 1px solid #333; color: #fff;">
                             <div class="card-body">
                                 <h5 class="card-title">${cita.servicio_nombre}</h5>
                                 <h6 class="card-subtitle mb-2 text-muted">${cita.modalidad_nombre}</h6>
@@ -626,26 +706,19 @@ if ($conn && $conn instanceof mysqli) {
             }
         }
 
-        // Función para ver modalidad
-        function verModalidad(id, nombre) {
+        // Función para ver paquete
+        function verPaquete(paqueteId) {
             const urlParams = new URLSearchParams(window.location.search);
             const portalUsuarioId = urlParams.get('portal_usuario_id');
-
-            // Redirigir a página de servicios de la modalidad
-            let url = `modalidad.php?id=${id}&nombre=${encodeURIComponent(nombre)}`;
+            let url = `reservar.php?tipo=paquete&paquete_id=${paqueteId}`;
             if (portalUsuarioId) url += `&portal_usuario_id=${portalUsuarioId}`;
+            if (medicoFiltroId > 0) url += `&medico_id=${medicoFiltroId}`;
             window.location.href = url;
-        }
-
-        // Función para ver paquete
-        function verPaquete(nombre) {
-            // Redirigir a página de paquetes
-            window.location.href = `paquetes.php?paquete=${encodeURIComponent(nombre)}`;
         }
 
         // Inicializar página
         document.addEventListener('DOMContentLoaded', function() {
-            cargarModalidades();
+            cargarServicios(); // Ahora carga servicios directamente
             cargarPaquetes();
             cargarCitasCliente(); // Cargar citas del cliente al iniciar
 

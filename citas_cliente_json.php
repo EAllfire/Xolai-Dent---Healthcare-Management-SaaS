@@ -36,6 +36,7 @@ ob_start();
 try {
     header('Content-Type: application/json');
     require_once("includes/db.php");
+    require_once("includes/auth.php");
 
     // Verificar si la conexión a la BD falló
     if ($conn->connect_error) {
@@ -43,6 +44,41 @@ try {
     }
 
     $cliente_id = $_GET['cliente_id'] ?? null;
+
+    // Verificar acceso del usuario actual al paciente según owner-scope
+    $allowed = obtenerIdsPermitidos();
+    $stmt_check = $conn->prepare("SELECT usuario_id FROM portal_pacientes WHERE id = ?");
+    $stmt_check->bind_param('i', $cliente_id);
+    $stmt_check->execute();
+    $res_check = $stmt_check->get_result();
+    $patientRow = $res_check->fetch_assoc();
+    $stmt_check->close();
+    if (!$patientRow) {
+        http_response_code(404);
+        throw new Exception('Paciente no encontrado.');
+    }
+    $patient_owner = $patientRow['usuario_id'];
+
+    if ($allowed !== null) {
+        if (is_array($allowed) && in_array('PARENT_ONLY', $allowed)) {
+            $parent = $_SESSION['id_padre'] ?? null;
+            if (!$parent || $patient_owner != $parent) {
+                http_response_code(403); throw new Exception('Acceso denegado.');
+            }
+        } elseif (is_array($allowed) && in_array('SELF_AND_CHILDREN', $allowed)) {
+            $self = $_SESSION['usuario_id'] ?? 0;
+            // comprobar self o hijo
+            if (!($patient_owner == $self)) {
+                // check if patient's owner is a child of self
+                $stmt_ch = $conn->prepare("SELECT COUNT(*) as cnt FROM agenda_usuarios WHERE id = ? AND id_padre = ?");
+                $stmt_ch->bind_param('ii', $patient_owner, $self);
+                $stmt_ch->execute(); $res_ch = $stmt_ch->get_result(); $rch = $res_ch->fetch_assoc(); $stmt_ch->close();
+                if ((int)$rch['cnt'] === 0) { http_response_code(403); throw new Exception('Acceso denegado.'); }
+            }
+        } elseif (is_array($allowed) && count($allowed)>0) {
+            if (!in_array((int)$patient_owner, array_map('intval', $allowed))) { http_response_code(403); throw new Exception('Acceso denegado.'); }
+        }
+    }
 
     if (empty($cliente_id)) {
         http_response_code(400); // Bad Request
@@ -54,8 +90,8 @@ try {
     $sql = "SELECT 
                 c.id, 
                 c.fecha, 
-                DATE_FORMAT(c.hora_inicio, '%H:%i') AS hora_inicio, 
-                DATE_FORMAT(c.hora_fin, '%H:%i') AS hora_fin, 
+                DATE_FORMAT(c.hora_inicio, '%h:%i %p') AS hora_inicio, 
+                DATE_FORMAT(c.hora_fin, '%h:%i %p') AS hora_fin, 
                 s.nombre AS servicio_nombre, 
                 m.nombre AS modalidad_nombre,
                 e.nombre AS estado_nombre

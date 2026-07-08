@@ -1,0 +1,84 @@
+[2026-03-04 15:47:33] [GUARDAR] Enviando WPP a 526251190299 para cita 18
+[2026-03-04 15:47:33] [WPP] Iniciando enviarWhatsAppSilencioso() para 526251190299
+[2026-03-04 15:47:33] [WPP] Preparando envío a 526251190299
+[2026-03-04 15:47:33] [WPP] ERROR: access_token vacío
+[2026-03-04 15:47:33] [GUARDAR] Resultado WPP: false
+[2026-03-12 06:42:07] [GUARDAR] Enviando WPP a 526251190299 para cita 19
+[2026-03-12 06:42:07] [WPP] Iniciando enviarWhatsAppSilencioso() para 526251190299
+[2026-03-12 06:42:07] [WPP] Preparando envío a 526251190299
+[2026-03-12 06:42:07] [WPP] ERROR: access_token vacío
+[2026-03-12 06:42:07] [GUARDAR] Resultado WPP: false
+[2026-03-13 15:21:34] [GUARDAR] Enviando WPP a 62555255252 para cita 20
+[2026-03-13 15:21:34] [WPP] Iniciando enviarWhatsAppSilencioso() para 62555255252
+[2026-03-13 15:21:34] [WPP] Preparando envío a 62555255252
+[2026-03-13 15:21:34] [WPP] ERROR: access_token vacío
+[2026-03-13 15:21:34] [GUARDAR] Resultado WPP: false
+[2026-03-15 00:42:11] [GUARDAR] Enviando WPP a 62555255252 para cita 21
+[2026-03-15 00:42:11] [WPP] Iniciando enviarWhatsAppSilencioso() para 62555255252
+[2026-03-15 00:42:11] [WPP] Preparando envío a 62555255252
+[2026-03-15 00:42:11] [WPP] ERROR: access_token vacío
+[2026-03-15 00:42:11] [GUARDAR] Resultado WPP: false
+[2026-03-19 04:27:14] [GUARDAR] Enviando WPP a 62555255252 para cita 25
+[2026-03-19 04:27:14] [WPP] Iniciando enviarWhatsAppSilencioso() para 62555255252
+[2026-03-19 04:27:14] [WPP] Preparando envío a 62555255252
+[2026-03-19 04:27:14] [WPP] ERROR: access_token vacío
+[2026-03-19 04:27:14] [GUARDAR] Resultado WPP: false
+[2026-03-19 04:28:09] [GUARDAR] Enviando WPP a 62555255252 para cita 26
+[2026-03-19 04:28:09] [WPP] Iniciando enviarWhatsAppSilencioso() para 62555255252
+[2026-03-19 04:28:09] [WPP] Preparando envío a 62555255252
+[2026-03-19 04:28:09] [WPP] ERROR: access_token vacío
+[2026-03-19 04:28:09] [GUARDAR] Resultado WPP: false
+[2026-03-23 02:35:06] [GUARDAR] Enviando WPP a 62555255252 para cita 27
+[2026-03-23 02:35:06] [WPP] Iniciando enviarWhatsAppSilencioso() para 62555255252
+[2026-03-23 02:35:06] [WPP] Preparando envío a 62555255252
+[2026-03-23 02:35:06] [WPP] ERROR: access_token vacío
+[2026-03-23 02:35:06] [GUARDAR] Resultado WPP: false
+[2026-03-23 02:39:05] [GUARDAR] Enviando WPP a 245234324 para cita 28
+[2026-03-23 02:39:05] [WPP] Iniciando enviarWhatsAppSilencioso() para 245234324
+[2026-03-23 02:39:05] [WPP] Preparando envío a 245234324
+[2026-03-23 02:39:05] [WPP] ERROR: access_token vacío
+[2026-03-23 02:39:05] [GUARDAR] Resultado WPP: false
+[2026-03-23 05:33:23] --- INICIO DE RESERVA ---
+[2026-03-23 05:33:23] Datos recibidos: {"nombre":"Jaziel Osmar","telefono":"6255255121761267","email":"az@gamil.om","fecha_nacimiento":"1999-12-12","fecha_cita":"2026-03-27","hora_seleccionada":"08:00","observaciones":"","atencion_especial":0,"servicio_id":"20","modalidad_id":"","tipo_reserva":"servicio"}
+[2026-03-23 05:33:23] Creando nuevo paciente (sin portal_usuario_id).
+[2026-03-23 05:33:23] Usuario creador asignado desde sesión: 6
+[2026-03-23 05:33:24] Iniciando validación de límite de citas para paciente ID: 22
+[2026-03-23 05:33:24] Paciente ID: 22 tiene tipo_id: 1
+[2026-03-23 05:33:24] El límite de citas para el tipo_id 1 es: 10000
+[2026-03-23 05:33:24] Citas existentes para el tipo 1 en la fecha 2026-03-27: 0
+[2026-03-23 05:33:24] Calculando hora_fin. Inicio: 08:00:00, Duración: 30 min, Fin: 08:30:00
+[2026-03-23 05:33:24] [RESERVA CLIENTE] Enviando WPP a 6255255121761267 para cita 30
+[2026-03-23 05:33:24] [WPP] Iniciando enviarWhatsAppSilencioso() para 6255255121761267
+[2026-03-23 05:33:24] [WPP] Preparando envío a 6255255121761267
+[2026-03-23 05:33:24] [WPP] ERROR: access_token vacío
+[2026-03-23 05:33:24] [RESERVA CLIENTE] Resultado WPP: false
+[2026-03-23 05:33:24] --- FIN DE RESERVA EXITOSA (Cita ID: 30) ---
+[2026-03-23 23:12:03] --- INICIO DE RESERVA ---
+[2026-03-23 23:12:03] Datos recibidos: {"nombre":"Silvia Macias","telefono":"62511452421","email":"sil@gmail.com","fecha_nacimiento":"1989-12-12","fecha_cita":"2026-03-31","hora_seleccionada":"08:00","observaciones":"","atencion_especial":0,"servicio_id":"21","modalidad_id":"9","tipo_reserva":"servicio"}
+[2026-03-23 23:12:03] Creando nuevo paciente (sin portal_usuario_id).
+[2026-03-23 23:12:03] Usuario creador asignado desde sesión: 6
+[2026-03-23 23:12:03] Iniciando validación de límite de citas para paciente ID: 23
+[2026-03-23 23:12:03] Paciente ID: 23 tiene tipo_id: 1
+[2026-03-23 23:12:03] El límite de citas para el tipo_id 1 es: 10000
+[2026-03-23 23:12:03] Citas existentes para el tipo 1 en la fecha 2026-03-31: 0
+[2026-03-23 23:12:03] Calculando hora_fin. Inicio: 08:00:00, Duración: 120 min, Fin: 10:00:00
+[2026-03-23 23:12:03] [RESERVA CLIENTE] Enviando WPP a 62511452421 para cita 31
+[2026-03-23 23:12:03] [WPP] Iniciando enviarWhatsAppSilencioso() para 62511452421
+[2026-03-23 23:12:03] [WPP] Preparando envío a 62511452421
+[2026-03-23 23:12:03] [WPP] ERROR: access_token vacío
+[2026-03-23 23:12:03] [RESERVA CLIENTE] Resultado WPP: false
+[2026-03-23 23:12:03] --- FIN DE RESERVA EXITOSA (Cita ID: 31) ---
+[2026-03-24 00:16:50] --- INICIO DE RESERVA ---
+[2026-03-24 00:16:50] Datos recibidos: {"nombre":"Eli Ordo\u00f1ez","telefono":"62555255252","email":"eliordo625@gmail.com","fecha_nacimiento":"1999-12-12","fecha_cita":"2026-03-24","hora_seleccionada":"07:00","observaciones":"","atencion_especial":0,"servicio_id":"21","modalidad_id":"9","tipo_reserva":"servicio"}
+[2026-03-24 00:16:50] Creando nuevo paciente (sin portal_usuario_id).
+[2026-03-24 00:16:50] Usuario creador asignado desde sesión: 6
+[2026-03-24 00:16:50] Paciente existente detectado (Smart Match). ID: 17
+[2026-03-24 00:16:50] Iniciando validación de límite de citas para paciente ID: 17
+[2026-03-24 00:16:50] ADVERTENCIA: No se pudo determinar el tipo_id para el paciente ID: 17. No se aplicará límite de citas.
+[2026-03-24 00:16:50] Calculando hora_fin. Inicio: 07:00:00, Duración: 120 min, Fin: 09:00:00
+[2026-03-24 00:16:50] [RESERVA CLIENTE] Enviando WPP a 62555255252 para cita 73
+[2026-03-24 00:16:50] [WPP] Iniciando enviarWhatsAppSilencioso() para 62555255252
+[2026-03-24 00:16:50] [WPP] Preparando envío a 62555255252
+[2026-03-24 00:16:50] [WPP] ERROR: access_token vacío
+[2026-03-24 00:16:50] [RESERVA CLIENTE] Resultado WPP: false
+[2026-03-24 00:16:50] --- FIN DE RESERVA EXITOSA (Cita ID: 73) ---

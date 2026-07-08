@@ -1,0 +1,36 @@
+[2026-03-23 05:24:06] --- INICIO DE RESERVA ---
+[2026-03-23 05:24:06] Datos recibidos: {"nombre":"Jaziel","telefono":"Melendez","email":"jaz@gmail.com","fecha_nacimiento":"1999-12-12","fecha_cita":"2026-03-27","hora_seleccionada":"08:00","observaciones":"","atencion_especial":0,"servicio_id":"20","modalidad_id":"undefined","tipo_reserva":"servicio"}
+[2026-03-23 05:24:06] Creando nuevo paciente (sin portal_usuario_id).
+[2026-03-23 05:24:06] Usuario creador asignado desde sesión: 6
+[2026-03-23 05:24:06] Iniciando validación de límite de citas para paciente ID: 20
+[2026-03-23 05:24:06] Paciente ID: 20 tiene tipo_id: 1
+[2026-03-23 05:24:06] El límite de citas para el tipo_id 1 es: 10000
+[2026-03-23 05:24:06] Citas existentes para el tipo 1 en la fecha 2026-03-27: 0
+[2026-03-23 05:27:04] --- INICIO DE RESERVA ---
+[2026-03-23 05:27:04] Datos recibidos: {"nombre":"Jaziel","telefono":"Mendez ","email":"jaz@gmail.com","fecha_nacimiento":"1999-12-12","fecha_cita":"2026-03-27","hora_seleccionada":"08:00","observaciones":"","atencion_especial":0,"servicio_id":"20","modalidad_id":"undefined","tipo_reserva":"servicio"}
+[2026-03-23 05:27:04] Creando nuevo paciente (sin portal_usuario_id).
+[2026-03-23 05:27:04] Usuario creador asignado desde sesión: 6
+[2026-03-23 05:27:04] Iniciando validación de límite de citas para paciente ID: 21
+[2026-03-23 05:27:04] Paciente ID: 21 tiene tipo_id: 1
+[2026-03-23 05:27:04] El límite de citas para el tipo_id 1 es: 10000
+[2026-03-23 05:27:04] Citas existentes para el tipo 1 en la fecha 2026-03-27: 0
+[2026-03-23 05:27:04] Calculando hora_fin. Inicio: 08:00:00, Duración: 30 min, Fin: 08:30:00
+[2026-03-26 03:22:57] --- INICIO DE RESERVA ---
+[2026-03-26 03:22:57] Datos recibidos: {"nombre":"David Macias","telefono":"6254564534","email":"dav@gmail.com","fecha_nacimiento":"1999-08-12","fecha_cita":"2026-03-26","hora_seleccionada":"17:30","observaciones":"","atencion_especial":0,"servicio_id":"20","modalidad_id":"8","tipo_reserva":"servicio"}
+[2026-03-26 03:22:57] Creando nuevo paciente (sin portal_usuario_id).
+[2026-03-26 03:22:57] Usuario creador asignado desde sesión: 6
+[2026-03-26 03:22:57] Iniciando validación de límite de citas para paciente ID: 24
+[2026-03-26 03:22:57] Paciente ID: 24 tiene tipo_id: 1
+[2026-03-26 03:22:57] El límite de citas para el tipo_id 1 es: 10000
+[2026-03-26 03:22:57] Citas existentes para el tipo 1 en la fecha 2026-03-26: 0
+[2026-03-26 03:22:57] Calculando hora_fin. Inicio: 17:30:00, Duración: 30 min, Fin: 18:00:00
+[2026-03-26 03:22:57] --- FIN DE RESERVA EXITOSA (Cita ID: 74) ---
+[2026-03-26 05:46:29] --- INICIO DE RESERVA ---
+[2026-03-26 05:46:29] Datos recibidos: {"nombre":"David Macias","telefono":"6254564534","email":"dav@gmail.com","fecha_nacimiento":"1999-08-12","fecha_cita":"2026-03-26","hora_seleccionada":"17:00","observaciones":"ef","atencion_especial":0,"servicio_id":"20","modalidad_id":"8","tipo_reserva":"servicio"}
+[2026-03-26 05:46:29] Creando nuevo paciente (sin portal_usuario_id).
+[2026-03-26 05:46:29] Usuario creador asignado desde sesión: 6
+[2026-03-26 05:46:29] Paciente existente detectado (Smart Match). ID: 24
+[2026-03-26 05:46:29] Iniciando validación de límite de citas para paciente ID: 24
+[2026-03-26 05:46:29] ADVERTENCIA: No se pudo determinar el tipo_id para el paciente ID: 24. No se aplicará límite de citas.
+[2026-03-26 05:46:29] Calculando hora_fin. Inicio: 17:00:00, Duración: 30 min, Fin: 17:30:00
+[2026-03-26 05:46:29] --- FIN DE RESERVA EXITOSA (Cita ID: 80) ---

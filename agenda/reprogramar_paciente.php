@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($cita_id) {
     try {
         $stmt = $conn->prepare("
-            SELECT c.id, c.fecha, c.hora_inicio, c.modalidad_id, c.estado_id, p.nombre, p.apellido, s.nombre AS servicio_nombre, m.nombre AS modalidad_nombre, e.nombre AS estado_nombre
+            SELECT c.id, c.fecha, c.hora_inicio, c.modalidad_id, c.servicio_id, c.estado_id, p.nombre, p.apellido, s.nombre AS servicio_nombre, m.nombre AS modalidad_nombre, e.nombre AS estado_nombre
             FROM agenda_citas c
             LEFT JOIN portal_pacientes p ON c.paciente_id = p.id
             LEFT JOIN portal_servicios s ON c.servicio_id = s.id
@@ -88,13 +88,14 @@ if ($cita_id) {
         $stmt->store_result();
         
         if ($stmt->num_rows > 0) {
-            $stmt->bind_result($id, $fecha, $hora_inicio, $modalidad_id_db, $estado_id_db, $paciente_nombre, $paciente_apellido, $servicio_nombre, $modalidad_nombre, $estado_nombre);
+            $stmt->bind_result($id, $fecha, $hora_inicio, $modalidad_id_db, $servicio_id_db, $estado_id_db, $paciente_nombre, $paciente_apellido, $servicio_nombre, $modalidad_nombre, $estado_nombre);
             $stmt->fetch();
             $cita = [
                 'id' => $id,
                 'fecha' => $fecha,
                 'hora_inicio' => $hora_inicio,
                 'modalidad_id' => $modalidad_id_db,
+                'servicio_id' => $servicio_id_db,
                 'estado_id' => $estado_id_db,
                 'paciente_nombre' => $paciente_nombre,
                 'paciente_apellido' => $paciente_apellido,
@@ -156,8 +157,8 @@ $conn->close();
         .form-label { font-weight: 500; color: var(--primary-color); }
         .btn-reprogram { background: var(--accent-color); border: none; border-radius: 50px; padding: 0.875rem 2rem; font-weight: 600; color: white; width: 100%; font-size: 1.1rem; }
         .btn-reprogram:hover { background: #0a4a6a; }
-        .time-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
-        .time-slot { background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 0.75rem; text-align: center; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
+        .time-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.5rem; margin-top: 1rem; }
+        .time-slot { background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 0.5rem; text-align: center; cursor: pointer; transition: all 0.3s ease; font-weight: 500; font-size: 0.9rem; }
         .time-slot:hover { border-color: var(--accent-color); }
         .time-slot.selected { background: var(--accent-color); border-color: var(--accent-color); color: white; }
         .time-slot.unavailable { background: #f3f4f6; border-color: #d1d5db; color: #9ca3af; cursor: not-allowed; }
@@ -198,10 +199,7 @@ $conn->close();
                 </ul>
 
                 <?php if ($reprogramacion_exitosa): ?>
-                     <div class="text-center mt-4">
-                        <p class="text-success">Tu cita ha sido actualizada.</p>
-                        <a href="/PortaldePacientes/main.php" class="btn btn-secondary">Ir a Mis Citas</a>
-                    </div>
+                     
                 <?php elseif ($cita['estado_id'] == 7): ?>
                     <div class="alert alert-danger mt-4">Esta cita se encuentra cancelada y no puede ser reprogramada.</div>
                     <div class="mt-4">
@@ -273,39 +271,36 @@ $conn->close();
             slotsContainer.innerHTML = '<p class="text-muted small">Cargando horarios...</p>';
             document.getElementById('hora_seleccionada').value = ''; // Limpiar selección previa
 
+            let availableSlots = [];
             try {
                 // El endpoint necesita el ID de la cita actual para excluirla de los horarios ocupados
                 const citaId = <?php echo $cita['id'] ?? 'null'; ?>;
-                const response = await fetch(`horarios_disponibles.php?fecha=${fecha}&modalidad_id=${modalidadId}&cita_id=${citaId}`);
+                const servicioId = <?php echo $cita['servicio_id'] ?? 'null'; ?>;
+                const response = await fetch(`horarios_disponibles.php?fecha=${fecha}&modalidad_id=${modalidadId}&servicio_id=${servicioId}&cita_id=${citaId}`);
                 if (!response.ok) {
-                    throw new Error('No se pudo conectar con el servidor de horarios.');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'No se pudo conectar con el servidor de horarios.');
                 }
-                const horariosOcupados = await response.json();
+                availableSlots = await response.json();
+
+                if (availableSlots.error) {
+                    throw new Error(availableSlots.error);
+                }
 
                 slotsContainer.innerHTML = '';
-                let hasAvailableSlots = false;
 
-                // Definir el rango de horas
-                for (let h = 8; h < 18; h++) {
-                    const time = `${h.toString().padStart(2, '0')}:00`;
-                    const timeWithSeconds = time + ':00'; // Comparar con el formato de la BD
-                    
-                    const isUnavailable = horariosOcupados.some(slot => slot.startsWith(time));
-
-                    const div = document.createElement('div');
-                    div.className = `time-slot ${isUnavailable ? 'unavailable' : ''}`;
-                    div.textContent = time;
-
-                    if (!isUnavailable) {
-                        hasAvailableSlots = true;
-                        div.onclick = () => selectTimeSlot(time, div);
-                    }
-                    slotsContainer.appendChild(div);
-                }
-
-                if (!hasAvailableSlots) {
+                if (availableSlots.length === 0) {
                     slotsContainer.innerHTML = '<p class="text-danger small">No hay horarios disponibles para esta fecha.</p>';
+                    return;
                 }
+                
+                availableSlots.forEach(time => {
+                    const div = document.createElement('div');
+                    div.className = 'time-slot';
+                    div.textContent = time;
+                    div.onclick = () => selectTimeSlot(time, div);
+                    slotsContainer.appendChild(div);
+                });
 
             } catch (error) {
                 console.error("Error al cargar horarios:", error);

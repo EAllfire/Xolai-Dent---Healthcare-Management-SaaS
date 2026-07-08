@@ -1,0 +1,2 @@
+ALTER TABLE agenda_expediente_dentista 
+ADD COLUMN registro_pagos_json JSON AFTER presupuesto_json;

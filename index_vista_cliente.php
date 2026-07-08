@@ -34,16 +34,18 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8f9fa;
+            background: #000000;
+            color: #e5e7eb;
             overflow-x: hidden;
         }
 
         /* Header Styles */
         .main-header {
-            background: #ffffff;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
             height: 80px;
-            border-bottom: 1px solid #e9ecef;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-bottom: 1px solid rgba(41, 121, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
             position: fixed;
             top: 0;
             left: 0;
@@ -70,7 +72,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         .logo-text {
             font-size: 14px;
             font-weight: 600;
-            color: #1f2937;
+            color: #ffffff;
             margin-top: 2px;
             letter-spacing: 0.5px;
         }
@@ -79,11 +81,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             display: flex;
             align-items: center;
             gap: 1rem;
-            background: #f8f9fa;
+            background: rgba(255, 255, 255, 0.05);
             padding: 0.5rem 1rem;
             border-radius: 8px;
-            color: #374151;
+            color: #e5e7eb;
             font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .header-buttons {
@@ -92,9 +95,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
         
         .btn-header {
-            background: #1f2937;
-            color: white;
-            border: 1px solid #374151;
+            background: rgba(41, 121, 255, 0.1);
+            color: #e5e7eb;
+            border: 1px solid rgba(41, 121, 255, 0.2);
             border-radius: 6px;
             padding: 0.5rem 1rem;
             font-size: 13px;
@@ -104,10 +107,11 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
         
         .btn-header:hover {
-            background: #374151;
+            background: rgba(41, 121, 255, 0.2);
             color: white;
             text-decoration: none;
             transform: translateY(-1px);
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.2);
         }
 
         /* Main Content */
@@ -120,12 +124,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         /* Sidebar */
         .sidebar {
             width: 350px;
-            background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
-            border-right: 1px solid #e9ecef;
+            background: #050505;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
             padding: 1.5rem;
             overflow-y: auto;
             scrollbar-width: thin;
-            scrollbar-color: #cbd5e0 #f1f5f9;
+            scrollbar-color: #2979ff #0a0a0a;
         }
         
         .sidebar::-webkit-scrollbar {
@@ -133,53 +137,56 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
         
         .sidebar::-webkit-scrollbar-track {
-            background: #f1f5f9;
+            background: #050505;
             border-radius: 3px;
         }
         
         .sidebar::-webkit-scrollbar-thumb {
-            background: #cbd5e0;
+            background: #333;
             border-radius: 3px;
         }
         
         .filter-card {
-            background: white;
+            background: #0a0a0a;
             border-radius: 8px;
             padding: 1.25rem;
             margin-bottom: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             transition: all 0.2s;
         }
         
         .filter-card:hover {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 0 15px rgba(41, 121, 255, 0.1);
             transform: translateY(-1px);
         }
         
         .filter-card h5 {
-            color: #1f2937;
+            color: #e0e0e0;
             font-size: 14px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 1rem;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding-bottom: 0.5rem;
         }
         
         .form-control, .form-select {
-            border: 1px solid #d1d5db;
+            background: #000000;
+            border: 1px solid #333;
+            color: #e5e7eb;
             border-radius: 6px;
             padding: 0.5rem 0.75rem;
             font-size: 13px;
-            background: white;
             transition: all 0.2s;
         }
         
         .form-control:focus, .form-select:focus {
-            border-color: #1f2937;
-            box-shadow: 0 0 0 2px rgba(31, 41, 55, 0.1);
+            background: #000000;
+            color: #fff;
+            border-color: #2979ff;
+            box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.2);
             outline: none;
         }
 
@@ -187,7 +194,7 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         .calendar-area {
             flex: 1;
             padding: 1.5rem;
-            background: white;
+            background: #000000;
         }
         
         .calendar-header {
@@ -196,13 +203,13 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             align-items: center;
             margin-bottom: 1.5rem;
             padding: 1rem;
-            background: #f8f9fa;
+            background: #0a0a0a;
             border-radius: 8px;
-            border: 1px solid #e9ecef;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         
         .calendar-title {
-            color: #1f2937;
+            color: #ffffff;
             font-size: 18px;
             font-weight: 600;
             margin: 0;
@@ -211,11 +218,12 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         /* FullCalendar Customizations */
         .fc {
             font-family: 'Inter', sans-serif;
+            color: #e5e7eb;
         }
         
         .fc-button-primary {
-            background: #1f2937 !important;
-            border-color: #374151 !important;
+            background: #111 !important;
+            border-color: #333 !important;
             color: white !important;
             border-radius: 6px !important;
             font-weight: 500 !important;
@@ -223,19 +231,20 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
         
         .fc-button-primary:hover {
-            background: #374151 !important;
-            border-color: #4b5563 !important;
+            background: #2979ff !important;
+            border-color: #2979ff !important;
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.4);
         }
         
         .fc-event {
             border-radius: 4px !important;
             border: none !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
             font-size: 12px !important;
         }
         
         .fc-event:hover {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3) !important;
             transform: translateY(-1px);
         }
         
@@ -244,22 +253,37 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
         
         .fc-today-button, .fc-prev-button, .fc-next-button {
-            background: white !important;
-            border-color: #d1d5db !important;
-            color: #374151 !important;
+            background: #111 !important;
+            border-color: #333 !important;
+            color: #e5e7eb !important;
         }
         
         .fc-today-button:hover, .fc-prev-button:hover, .fc-next-button:hover {
-            background: #f3f4f6 !important;
-            border-color: #9ca3af !important;
+            background: #2979ff !important;
+            border-color: #2979ff !important;
+            color: #fff !important;
+        }
+        
+        /* Dark mode for calendar grid */
+        .fc-theme-standard td, .fc-theme-standard th {
+            border-color: #333 !important;
+        }
+        
+        .fc-timegrid-slot {
+            background: #000000 !important;
+        }
+        
+        .fc-col-header-cell {
+            background: #0a0a0a !important;
+            color: #e5e7eb !important;
         }
 
         /* Mini Calendars */
         .mini-calendar {
-            background: white;
+            background: transparent;
             border-radius: 8px;
             padding: 1rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: none;
         }
         
         .mini-calendar .flatpickr-calendar {
@@ -267,6 +291,27 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
             width: 100% !important;
             box-shadow: none !important;
             border: none !important;
+            background: transparent !important;
+            color: #e5e7eb !important;
+        }
+        
+        .flatpickr-calendar {
+            background: #0a0a0a !important;
+            border: 1px solid #333 !important;
+        }
+        
+        .flatpickr-day {
+            color: #e5e7eb !important;
+        }
+        
+        .flatpickr-day:hover {
+            background: rgba(41, 121, 255, 0.2) !important;
+        }
+        
+        .flatpickr-day.selected {
+            background: #2979ff !important;
+            border-color: #2979ff !important;
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.4) !important;
         }
 
         /* Action Buttons */
@@ -277,9 +322,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
         
         .btn-action {
-            background: #1f2937;
+            background: #111;
             color: white;
-            border: none;
+            border: 1px solid #333;
             border-radius: 6px;
             padding: 0.6rem 1.2rem;
             font-size: 13px;
@@ -289,7 +334,9 @@ $puede_gestionar_usuarios = ($user_tipo === 'admin');
         }
         
         .btn-action:hover {
-            background: #374151;
+            background: #2979ff;
+            border-color: #2979ff;
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.4);
             transform: translateY(-1px);
         }
 

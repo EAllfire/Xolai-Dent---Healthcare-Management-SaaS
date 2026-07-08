@@ -3,6 +3,7 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 ini_set('log_errors', 1);
 
+session_start();
 header('Content-Type: application/json');
 
 ob_start();
@@ -10,6 +11,13 @@ ob_clean();
 
 try {
     require_once("includes/db.php");
+
+    if (!isset($_SESSION['usuario_id'])) {
+        echo json_encode(['success' => false, 'error' => "No autorizado."]);
+        exit;
+    }
+
+    $usuario_tipo = $_SESSION['usuario_tipo'] ?? 'usuario';
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cita_id = $_POST['cita_id'] ?? '';
@@ -50,6 +58,10 @@ try {
         $stmt_check->fetch();
         $stmt_check->close();
 
+        // --- VERIFICACIÓN DE DISPONIBILIDAD ---
+        // Permitir el empalme de citas solo para usuarios tipo 'dentista'
+        if ($usuario_tipo !== 'dentista') {
+
         // 2. Verificar solapamiento de horarios
         $stmt_overlap = $conn->prepare("
             SELECT COUNT(*) as total 
@@ -72,6 +84,8 @@ try {
             echo json_encode(['success' => false, 'error' => 'Ya existe una cita en ese horario para la misma modalidad.']);
             exit;
         }
+        }
+        // --- FIN: VERIFICACIÓN DE DISPONIBILIDAD ---
         
         // 3. Actualizar la cita
         $stmt_update = $conn->prepare("
@@ -85,6 +99,14 @@ try {
         $stmt_update->bind_param("sssii", $fecha, $hora_inicio, $hora_fin, $estado_id, $cita_id);
         
         if ($stmt_update->execute()) {
+            // Sincronizar cambios con Apple Calendar
+            try {
+                require_once __DIR__ . "/includes/icloud_functions.php";
+                syncCitaToAppleCalendar($conn, $cita_id);
+            } catch (Throwable $e) {
+                error_log("Error al sincronizar cita $cita_id tras actualizar en admin: " . $e->getMessage());
+            }
+
             echo json_encode(['success' => true, 'message' => 'Cita actualizada correctamente.']);
         } else {
             echo json_encode(['success' => false, 'error' => 'Error al actualizar la cita: ' . $stmt_update->error]);

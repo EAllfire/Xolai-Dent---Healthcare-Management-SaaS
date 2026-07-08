@@ -3,10 +3,11 @@
 // Actualizado: 7 de octubre de 2025
 
 // CONFIGURACIÓN REMOTA (PRODUCCIÓN)
-$servername = "107.180.11.215";
-$username = "eli";
-$password = "HACeli2025";
-$dbname = "hac";
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "agenda_hospital";
+$port = "8883"; // MySQL default port; overridden for MAMP when needed
 
 /* 
 // CONFIGURACIÓN LOCAL (DESARROLLO - MAMP)

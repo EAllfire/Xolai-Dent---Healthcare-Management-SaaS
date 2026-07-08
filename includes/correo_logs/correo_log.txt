@@ -1,0 +1,70 @@
+[2026-03-04 15:47:33] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-04 15:47:33] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-04 15:47:33] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-04 15:47:33] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-04 15:47:33] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-12 06:42:07] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-12 06:42:07] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-12 06:42:07] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-12 06:42:07] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-12 06:42:07] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-13 15:21:34] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-13 15:21:34] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-13 15:21:34] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-13 15:21:35] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-13 15:21:35] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-15 00:42:11] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-15 00:42:11] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-15 00:42:11] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-15 00:42:11] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-15 00:42:11] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-19 04:27:14] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-19 04:27:14] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-19 04:27:14] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-19 04:27:14] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-19 04:27:14] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-19 04:28:09] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-19 04:28:09] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-19 04:28:09] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-19 04:28:09] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-19 04:28:09] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-23 02:35:06] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-23 02:35:06] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-23 02:35:06] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-23 02:35:06] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-23 02:35:06] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-23 02:39:05] INFO: [GUARDAR] Enviando EMAIL a sdcks@gmail.com
+[2026-03-23 02:39:05] INFO: Iniciando envío de correo a sdcks@gmail.com
+[2026-03-23 02:39:05] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-23 02:39:05] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-23 02:39:05] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-26 04:33:32] INFO: [GUARDAR] Enviando EMAIL a jaz@gmail.com
+[2026-03-26 04:33:32] INFO: Iniciando envío de correo a jaz@gmail.com
+[2026-03-26 04:33:32] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-26 04:33:32] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-26 04:33:32] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-26 04:35:01] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-26 04:35:01] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-26 04:35:01] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-26 04:35:01] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-26 04:35:01] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-26 04:45:13] INFO: [GUARDAR] Enviando EMAIL a az@gamil.om
+[2026-03-26 04:45:13] INFO: Iniciando envío de correo a az@gamil.om
+[2026-03-26 04:45:13] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-26 04:45:13] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-26 04:45:13] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-26 05:42:09] INFO: [GUARDAR] Enviando EMAIL a jaz@gmail.com
+[2026-03-26 05:42:09] INFO: Iniciando envío de correo a jaz@gmail.com
+[2026-03-26 05:42:09] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-26 05:42:09] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-26 05:42:09] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-03-27 17:24:45] INFO: [GUARDAR] Enviando EMAIL a eliordo625@gmail.com
+[2026-03-27 17:24:45] INFO: Iniciando envío de correo a eliordo625@gmail.com
+[2026-03-27 17:24:45] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-03-27 17:24:45] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-03-27 17:24:45] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}
+[2026-04-06 06:03:09] INFO: [GUARDAR] Enviando EMAIL a jaz@gmail.com
+[2026-04-06 06:03:09] INFO: Iniciando envío de correo a jaz@gmail.com
+[2026-04-06 06:03:09] INFO: Intentando enviar correo con asunto 'Confirmación de Cita Hospital Angeles Cuauhtemoc'...
+[2026-04-06 06:03:09] ERROR: Excepción PHPMailer: SMTP Error: Could not connect to SMTP host. Failed to connect to server
+[2026-04-06 06:03:09] INFO: [GUARDAR] Resultado EMAIL: {"success":false,"error":"SMTP Error: Could not connect to SMTP host. Failed to connect to server"}

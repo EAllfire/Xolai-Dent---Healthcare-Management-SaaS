@@ -3,17 +3,21 @@
 // CONFIGURACIÓN
 // =========================
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+
+// Iniciar sesión para obtener el usuario creador (Admin/Panel) si existe
+session_start();
 
 header('Content-Type: application/json');
 
 // Includes
 require_once __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/whatsapp_functions.php';
 
 // --- FUNCIÓN DE LOG INTEGRADA ---
 // Escribirá en un archivo llamado debug_log.txt en la misma carpeta.
+// Definida condicionalmente para evitar errores de re-declaración
+if (!function_exists('log_message')) {
 function log_message($message) {
     $log_file = __DIR__ . '/debug_log.txt';
     $timestamp = date('Y-m-d H:i:s');
@@ -21,8 +25,11 @@ function log_message($message) {
     // FILE_APPEND para añadir al final, LOCK_EX para evitar escrituras simultáneas.
     @file_put_contents($log_file, $log_entry, FILE_APPEND | LOCK_EX);
 }
+}
 
 log_message("--- INICIO DE RESERVA ---");
+
+try { // INICIO BLOQUE TRY GLOBAL
 
 // =========================
 // MANEJO DE FORM DATA CON JSON
@@ -76,6 +83,7 @@ $fecha_nacimiento = $input_data['fecha_nacimiento'];
 $servicio_id     = $input_data['servicio_id'] ?? null;
 $modalidad_id    = $input_data['modalidad_id'] ?? null;
 $observaciones   = $input_data['observaciones'] ?? '';
+$atencion_especial = $input_data['atencion_especial'] ?? 0; // Recibimos el nuevo campo
 
 $tipo_reserva    = $input_data['tipo_reserva'] ?? 'servicio';
 
@@ -166,32 +174,102 @@ if (!empty($portal_usuario_id)) {
     log_message("Creando nuevo paciente (sin portal_usuario_id).");
     error_log("BRANCH: Creando nuevo paciente (portal_usuario_id está vacío)");
     // =========================
-    // CREAR PACIENTE NORMAL (SIN PORTAL)
+    // OBTENER DUEÑO Y CREAR PACIENTE (SIN PORTAL)
     // =========================
+
+    // --- INICIO: OBTENER EL usuario_id DEL SERVICIO O MODALIDAD ---
+    // Un paciente nuevo debe pertenecer a un usuario (clínica/médico).
+    // Lo determinamos a partir del servicio o modalidad que se está reservando.
+    // O si existe una sesión activa (creado desde panel), usamos ese ID.
+    $usuario_propietario_id = null;
+
+    // 1. Prioridad: Usuario logueado (Admin/Recepcionista crea el paciente)
+    if (isset($_SESSION['usuario_id']) && !empty($_SESSION['usuario_id'])) {
+        $usuario_propietario_id = $_SESSION['usuario_id'];
+        log_message("Usuario creador asignado desde sesión: " . $usuario_propietario_id);
+    } else {
+        // 2. Fallback: Si es reserva pública, buscar dueño del servicio o modalidad
+        if (!empty($servicio_id)) {
+            $stmt_owner = $conn->prepare("SELECT usuario_id FROM portal_servicios WHERE id = ?");
+            $stmt_owner->bind_param("i", $servicio_id);
+            $stmt_owner->execute();
+            $stmt_owner->bind_result($owner_id);
+            if ($stmt_owner->fetch()) {
+                $usuario_propietario_id = $owner_id;
+            }
+            $stmt_owner->close();
+        }
+        // Si no se encuentra por servicio, intentar por modalidad
+        if (empty($usuario_propietario_id) && !empty($modalidad_id)) {
+            $stmt_owner = $conn->prepare("SELECT usuario_id FROM agenda_modalidades WHERE id = ?");
+            $stmt_owner->bind_param("i", $modalidad_id);
+            $stmt_owner->execute();
+            $stmt_owner->bind_result($owner_id);
+            if ($stmt_owner->fetch()) {
+                $usuario_propietario_id = $owner_id;
+            }
+            $stmt_owner->close();
+        }
+    }
+    // --- FIN: OBTENER EL usuario_id ---
+
     $nombre_partes = explode(' ', trim($nombre_completo), 2);
     $nombre = $nombre_partes[0];
     $apellido = $nombre_partes[1] ?? '';
-    
+
+    // =========================
+    // SMART MATCHING: BUSCAR PACIENTE EXISTENTE
+    // =========================
+    $paciente_encontrado_id = null;
+
+    // ESTRATEGIA SEGURA: Coincidencia por (Correo O Teléfono) Y Fecha de Nacimiento.
+    // Si el contacto coincide pero la fecha de nacimiento es distinta, se asume que es un familiar (hijo/padre)
+    // y se crea un paciente nuevo en lugar de sobrescribir el existente.
+    $sql_check = "SELECT id FROM portal_pacientes WHERE (correo = ? OR telefono = ?) AND fecha_nacimiento = ? LIMIT 1";
+    $stmt_check = $conn->prepare($sql_check);
+    $stmt_check->bind_param("sss", $email, $telefono, $fecha_nacimiento);
+    $stmt_check->execute();
+    $stmt_check->bind_result($found_id);
+    if ($stmt_check->fetch()) {
+        $paciente_encontrado_id = $found_id;
+    }
+    $stmt_check->close();
+
     // CORRECCIÓN: La columna se llama 'tipo_id', no 'tipo'. Asignamos un valor por defecto (ej. 1 para 'Cliente Web')
     $default_tipo_id = 1; // Asumimos que 1 es un tipo de paciente válido como 'Cliente Web'
 
-    $stmt = $conn->prepare("INSERT INTO portal_pacientes (nombre, apellido, telefono, correo, fecha_nacimiento, tipo_id, origen) VALUES (?, ?, ?, ?, ?, ?, 'web')");
-    $stmt->bind_param("sssssi", $nombre, $apellido, $telefono, $email, $fecha_nacimiento, $default_tipo_id);
+    if ($paciente_encontrado_id) {
+        // CASO A: PACIENTE EXISTE -> Actualizar datos y usar su ID
+        $paciente_id = $paciente_encontrado_id;
+        log_message("Paciente existente detectado (Smart Match). ID: " . $paciente_id);
+        
+        // Actualizamos nombre, teléfono, etc. para mantener la info al día
+        $stmt_update = $conn->prepare("UPDATE portal_pacientes SET nombre = ?, apellido = ?, telefono = ?, correo = ?, fecha_nacimiento = ? WHERE id = ?");
+        $stmt_update->bind_param("sssssi", $nombre, $apellido, $telefono, $email, $fecha_nacimiento, $paciente_id);
+        $stmt_update->execute();
+        $stmt_update->close();
+        
+        error_log("Paciente existente actualizado sin login, Paciente ID: {$paciente_id}");
+    } else {
+        // CASO B: PACIENTE NUEVO -> Crear registro
+        $stmt = $conn->prepare("INSERT INTO portal_pacientes (usuario_id, nombre, apellido, telefono, correo, fecha_nacimiento, tipo_id, origen) VALUES (?, ?, ?, ?, ?, ?, ?, 'web')");
+        $stmt->bind_param("isssssi", $usuario_propietario_id, $nombre, $apellido, $telefono, $email, $fecha_nacimiento, $default_tipo_id);
 
-    if (!$stmt->execute()) {
-        error_log("ERROR: Fallo al crear nuevo paciente: " . $stmt->error);
-        echo json_encode([
-            "success" => false,
-            "error" => "Error al crear paciente",
-            "db_error" => $stmt->error
-        ]);
-        log_message("ERROR: Fallo al crear nuevo paciente: " . $stmt->error);
-        exit;
+        if (!$stmt->execute()) {
+            error_log("ERROR: Fallo al crear nuevo paciente: " . $stmt->error);
+            echo json_encode([
+                "success" => false,
+                "error" => "Error al crear paciente",
+                "db_error" => $stmt->error
+            ]);
+            log_message("ERROR: Fallo al crear nuevo paciente: " . $stmt->error);
+            exit;
+        }
+
+        $paciente_id = $stmt->insert_id;
+        $stmt->close();
+        error_log("Nuevo paciente creado sin portal_usuario_id, Paciente ID: {$paciente_id}");
     }
-
-    $paciente_id = $stmt->insert_id;
-    $stmt->close();
-    error_log("Nuevo paciente creado sin portal_usuario_id, Paciente ID: {$paciente_id}");
 }
 
 // =========================
@@ -264,7 +342,7 @@ $hora_inicio = $hora . ":00";
 
     // 1. Obtener la duración del servicio que se quiere agendar
     $duracion_servicio_actual = 30; // Duración por defecto en minutos
-    $stmt_duracion = $conn->prepare("SELECT duracion FROM portal_servicios WHERE id = ?");
+    $stmt_duracion = $conn->prepare("SELECT duracion_minutos FROM portal_servicios WHERE id = ?");
     if ($stmt_duracion) {
         $stmt_duracion->bind_param("i", $servicio_id);
         $stmt_duracion->execute();
@@ -282,16 +360,13 @@ log_message("Calculando hora_fin. Inicio: $hora_inicio, Duración: $duracion_ser
 
 $estado_id = 1; // 1 = Reservado
 
-// Obtener profesional (primer disponible)
-$profesional_id = 1; // Valor por defecto
-$stmt_prof = $conn->prepare("SELECT id FROM agenda_profesionales ORDER BY id LIMIT 1");
-if ($stmt_prof) {
-    $stmt_prof->execute();
-    $stmt_prof->bind_result($profesional_id_temp);
-    $stmt_prof->fetch();
-    if ($profesional_id_temp) $profesional_id = $profesional_id_temp;
-    $stmt_prof->close();
-}
+// DETERMINAR PROFESIONAL: Prioridad al usuario autenticado si es dentista/médico, 
+// de lo contrario al dueño del servicio o clínica.
+$usuario_tipo_auth = $_SESSION['usuario_tipo'] ?? null;
+$usuario_id_auth = $_SESSION['usuario_id'] ?? null;
+$profesional_id = (in_array($usuario_tipo_auth, ['dentista', 'medico']) && $usuario_id_auth) 
+    ? $usuario_id_auth 
+    : ($usuario_propietario_id ?? 1);
 
 // Si es paquete y no tiene servicio_id, buscar uno
 if ($tipo_reserva === 'paquete' && empty($servicio_id)) {
@@ -316,11 +391,11 @@ $total_empalme = 0;
 // que se solape con el horario solicitado.
 $stmt_empalme = $conn->prepare(
     "SELECT COUNT(*) as total FROM agenda_citas 
-     WHERE fecha = ? AND modalidad_id = ? AND estado_id != 7 AND hora_inicio < ? AND hora_fin > ?"
+     WHERE fecha = ? AND (modalidad_id = ? OR profesional_id = ?) AND estado_id != 7 AND hora_inicio < ? AND hora_fin > ?"
 );
 
 if ($stmt_empalme) {
-    $stmt_empalme->bind_param("siss", $fecha, $modalidad_id, $hora_fin, $hora_inicio); // Los parámetros están correctos
+    $stmt_empalme->bind_param("siiss", $fecha, $modalidad_id, $profesional_id, $hora_fin, $hora_inicio);
     $stmt_empalme->execute();
     $stmt_empalme->bind_result($total_empalme);
     $stmt_empalme->fetch();
@@ -344,11 +419,16 @@ $tipo_cita = ($tipo_reserva === 'paquete') ? 'paquete' : 'individual';
 
 $stmt_cita = $conn->prepare("
     INSERT INTO agenda_citas 
-    (fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, nota_paciente, nota_interna, tipo, url_identificacion, url_orden_medica)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (usuario_id, fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, nota_paciente, nota_interna, tipo, url_identificacion, url_orden_medica, atencion_especial)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
 
-$stmt_cita->bind_param("sssiiiissssss", 
+if (!$stmt_cita) {
+    throw new Exception("Error al preparar la inserción de la cita: " . $conn->error);
+}
+
+$stmt_cita->bind_param("isssiiiissssssi", 
+    $usuario_propietario_id,
     $fecha, 
     $hora_inicio, 
     $hora_fin, 
@@ -361,7 +441,8 @@ $stmt_cita->bind_param("sssiiiissssss",
     $nota_interna, 
     $tipo_cita,
     $url_identificacion,
-    $url_orden_medica
+    $url_orden_medica,
+    $atencion_especial // Añadimos el nuevo parámetro
 );
 
 if (!$stmt_cita->execute()) {
@@ -377,91 +458,12 @@ if (!$stmt_cita->execute()) {
 $cita_id = $stmt_cita->insert_id;
 $stmt_cita->close();
 
-// ================================================================
-// ENVIAR NOTIFICACIÓN WPP (LÓGICA IDÉNTICA A guardar_cita.php)
-// ================================================================
-
-// Obtener las notas del servicio
-$notas_servicio = '';
-if (!empty($servicio_id)) {
-    $stmt_notas = $conn->prepare("SELECT notas FROM portal_servicios WHERE id = ?");
-    $stmt_notas->bind_param("i", $servicio_id);
-    $stmt_notas->execute();
-    $stmt_notas->bind_result($notas_from_db);
-    if ($stmt_notas->fetch()) {
-        $notas_servicio = $notas_from_db;
-    }
-    $stmt_notas->close();
-}
-
-// --- INICIO: Lógica de Edad para Notificación ---
-// Calcular la edad del paciente a partir de la fecha de nacimiento
-if (!empty($fecha_nacimiento)) {
-    try {
-        $fecha_nac = new DateTime($fecha_nacimiento);
-        $hoy = new DateTime();
-        $edad = $hoy->diff($fecha_nac)->y;
-
-        if ($edad < 18) {
-            // Si es menor de edad, añadir la nota para el tutor
-            $notas_servicio .= " Favor de presentarse acompañado de su tutor legal";
-        }
-    } catch (Exception $e) {
-        // Si la fecha de nacimiento es inválida, no se hace nada y se continúa.
-        error_log("Error al calcular la edad para la reserva: " . $e->getMessage());
-    }
-}
-// --- FIN: Lógica de Edad para Notificación ---
-
+// Sincronización con Apple Calendar
 try {
-    // 1. Obtener datos frescos de la BD para asegurar consistencia
-    $stmt_data = $conn->prepare("SELECT p.nombre, p.apellido, p.telefono, m.nombre as modalidad_nombre FROM agenda_citas c JOIN portal_pacientes p ON c.paciente_id = p.id JOIN agenda_modalidades m ON c.modalidad_id = m.id WHERE c.id = ?");
-    $stmt_data->bind_param("i", $cita_id);
-    $stmt_data->execute();
-    
-    // 🔹 CORRECCIÓN: Usar bind_result en lugar de get_result para compatibilidad sin mysqlnd
-    $stmt_data->store_result();
-    $stmt_data->bind_result($db_nombre, $db_apellido, $db_telefono, $db_modalidad_nombre);
-
-    if ($stmt_data->fetch()) {
-        $nombre_paciente_db = trim($db_nombre . ' ' . $db_apellido);
-        $telefono_paciente_db = $db_telefono;
-        $modalidad_nombre_db = $db_modalidad_nombre;
-
-        // 2. Normalizar el teléfono (igual que en guardar_cita.php)
-        $telefono_wpp = preg_replace('/\D/', '', $telefono_paciente_db);
-        if (strlen($telefono_wpp) === 10) {
-            $telefono_wpp = '52' . $telefono_wpp;
-        }
-
-        log_message("[RESERVA CLIENTE] Enviando WPP a $telefono_wpp para cita $cita_id");
-
-        // 3. Crear URLs para las acciones
-        $url_base = "https://ha.angelescuauhtemoc.com/Agenda/agenda/";
-        $url_confirmar = $url_base . "confirmar_paciente.php?id=" . $cita_id;
-        $url_reprogramar = $url_base . "reprogramar_paciente.php?id=" . $cita_id;
-        $url_cancelar = $url_base . "cancelar_paciente.php?id=" . $cita_id;
-
-        // 4. Llamar a la función con los datos de la BD y las nuevas URLs
-        $resultado_wpp = enviarWhatsAppSilencioso(
-            $telefono_wpp,
-            $nombre_paciente_db,
-            $modalidad_nombre_db,
-            $fecha,
-            substr($hora_inicio, 0, 5),
-            $notas_servicio ?: 'Sin indicaciones adicionales.',
-            $url_confirmar,
-            $url_reprogramar,
-            $url_cancelar
-        );
-        log_message("[RESERVA CLIENTE] Resultado WPP: " . json_encode($resultado_wpp));
-    } else {
-        log_message("[RESERVA CLIENTE] ERROR: No se pudieron obtener los datos de la cita $cita_id para enviar WPP.");
-    }
-    
-    $stmt_data->close();
+    require_once __DIR__ . '/includes/icloud_functions.php';
+    syncCitaToAppleCalendar($conn, $cita_id);
 } catch (Throwable $e) {
-    log_message("[RESERVA CLIENTE] Excepción al enviar WPP: " . $e->getMessage());
+    log_message("ERROR: Fallo al sincronizar cita $cita_id con Apple Calendar: " . $e->getMessage());
 }
 
 // =========================
@@ -481,4 +483,10 @@ echo json_encode([
 ]);
 
 log_message("--- FIN DE RESERVA EXITOSA (Cita ID: $cita_id) ---");
+
+} catch (Throwable $e) {
+    http_response_code(500);
+    log_message("CRITICAL ERROR: " . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Error interno del servidor: ' . $e->getMessage()]);
+}
 exit;

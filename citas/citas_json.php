@@ -3,23 +3,62 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once("../includes/db.php");
+date_default_timezone_set('America/Mexico_City');
+session_start();
+require_once __DIR__ . "/../includes/db.php";
+require_once __DIR__ . "/../includes/auth.php";
 header('Content-Type: application/json; charset=utf-8');
 
-$sql = "SELECT
+// Obtener el ID del usuario de la sesión para filtrar las citas.
+// Use permission helper to scope visible citas
+$usuario_id_real = $_SESSION['usuario_id'] ?? null;
+if (!$usuario_id_real) { echo json_encode([]); exit; }
+
+$allowed = obtenerIdsPermitidos();
+
+$sql = "SELECT 
     c.id, c.fecha, c.hora_inicio, c.hora_fin, c.modalidad_id, c.estado_id, e.nombre AS estado, c.nota_interna,
-    p.nombre AS paciente, p.telefono, p.alergias AS diagnostico,
+    CONCAT(COALESCE(p.nombre, ''), ' ', COALESCE(p.apellido_paterno, ''), ' ', COALESCE(p.apellido_materno, '')) AS paciente_full,
+    c.paciente_nombre_text AS paciente_nombre_text,
+    p.telefono AS paciente_telefono,
+    c.telefono_celular AS telefono_celular,
+    p.alergias AS diagnostico,
     s.nombre AS servicio,
-    atp.nombre AS tipo_paciente
+    c.servicio_text AS servicio_text,
+    atp.nombre AS tipo_paciente,
+    u.nombre AS doctor_nombre
   FROM agenda_citas c
   LEFT JOIN portal_pacientes p ON c.paciente_id = p.id
   LEFT JOIN portal_servicios s ON c.servicio_id = s.id
   LEFT JOIN agenda_estado_cita e ON c.estado_id = e.id
   LEFT JOIN agenda_tipos_paciente atp ON p.tipo_id = atp.id
-  WHERE c.estado_id != 7"; // Excluir citas canceladas
+  LEFT JOIN agenda_usuarios u ON c.profesional_id = u.id
+  WHERE c.estado_id != 7";
+// Append owner-scoping based on $allowed
+if ($allowed === null) {
+    // no extra filter
+} elseif (is_array($allowed) && in_array('PARENT_ONLY', $allowed)) {
+    $parent = $_SESSION['id_padre'] ?? null;
+    if ($parent) $sql .= " AND c.usuario_id = " . intval($parent);
+    else { echo json_encode([]); exit; }
+} elseif (is_array($allowed) && in_array('SELF_AND_CHILDREN', $allowed)) {
+    $self = $_SESSION['usuario_id'] ?? 0;
+    $sql .= " AND (c.usuario_id = " . intval($self) . " OR c.usuario_id IN (SELECT id FROM agenda_usuarios WHERE id_padre = " . intval($self) . "))";
+} elseif (is_array($allowed) && count($allowed) > 0) {
+    $ids = implode(',', array_map('intval', $allowed));
+    $sql .= " AND c.usuario_id IN ($ids)";
+}
 
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    http_response_code(500);
+    error_log("SQL Prepare Error in citas_json.php: " . $conn->error);
+    echo json_encode(['error' => 'Error al preparar la consulta de citas.']);
+    exit;
+}
 
-$result = $conn->query($sql);
+$stmt->execute();
+$result = $stmt->get_result();
 
 if ($result === false) {
     http_response_code(500);
@@ -60,27 +99,41 @@ while ($row = $result->fetch_assoc()) {
       $color = $colores_map[$estado_lower];
   }
   
+    $paciente_full = trim((string)($row['paciente_full'] ?? ''));
+    $paciente_nombre_text = trim((string)($row['paciente_nombre_text'] ?? ''));
+    $paciente_nombre = $paciente_full ?: $paciente_nombre_text;
+    $servicio = trim((string)($row['servicio'] ?? ''));
+    $servicio_text = trim((string)($row['servicio_text'] ?? ''));
+    $servicio_nombre = $servicio ?: $servicio_text;
+    $telefono = trim((string)($row['paciente_telefono'] ?? '')) ?: trim((string)($row['telefono_celular'] ?? ''));
+
   $evento = [
     'id' => $row['id'],
     'start' => $row['fecha']."T".$hora_inicio,
     'end' => $row['fecha']."T".$hora_fin,
+    // El recurso debe ser la MODALIDAD para que coincida con las columnas del calendario
     'resourceId' => $row['modalidad_id'],
     'color' => $color,
     'extendedProps' => [
         'estado' => $row['estado'],
         'estado_id' => $row['estado_id'], // <-- Añadido aquí
-        'telefono' => $row['telefono'],
+        'telefono' => $telefono,
+        'telefono_celular' => $row['telefono_celular'],
         'diagnostico' => $row['diagnostico'],
-        'servicio' => $row['servicio'],
+        'servicio' => $servicio_nombre,
+        'servicio_text' => $row['servicio_text'],
         'tipo_paciente' => $row['tipo_paciente'] ?? 'No especificado',
-        'motivo' => $row['nota_interna'] ?? ''
+        'motivo' => $row['nota_interna'] ?? '',
+        'paciente_full' => $paciente_full,
+        'paciente_nombre_text' => $paciente_nombre_text,
+        'doctor_nombre' => $row['doctor_nombre'] ?? 'No asignado'
     ]
   ];
 
   if ($estado_lower === 'bloqueado') {
       $evento['title'] = !empty($row['nota_interna']) ? $row['nota_interna'] : 'Espacio Bloqueado';
   } else {
-      $evento['title'] = ($row['paciente'] ?? 'Paciente no encontrado') . " (" . ($row['servicio'] ?? 'Servicio no encontrado') . ")";
+      $evento['title'] = ($paciente_nombre ?: 'Paciente no encontrado') . " (" . ($servicio_nombre ?: 'Servicio no encontrado') . ")";
   }
 
   $eventos[] = $evento;

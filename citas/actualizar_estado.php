@@ -4,8 +4,8 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 header('Content-Type: application/json');
-require_once '../includes/db.php';
-require_once '../includes/auth.php';
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/auth.php';
 
 // Verificar que el usuario esté logueado y tenga permisos
 if (!isset($_SESSION['usuario_id'])) {

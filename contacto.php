@@ -14,28 +14,29 @@
     
     <style>
         :root {
-            --primary-color: #1f2937;
-            --secondary-color: #3b82f6;
-            --accent-color: #10b981;
-            --light-bg: #f8fafc;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --primary-color: #ffffff;
+            --secondary-color: #a0a0a0;
+            --accent-color: #2979ff;
+            --light-bg: #000000;
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --danger-color: #ef4444;
         }
 
         body {
             font-family: 'Inter', sans-serif;
             line-height: 1.6;
-            color: #374151;
+            color: #e5e7eb;
             background: var(--light-bg);
             padding-top: 100px;
         }
 
         /* Header */
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(10, 10, 10, 0.95);
             backdrop-filter: blur(10px);
             box-shadow: var(--card-shadow);
             padding: 1rem 0;
+            border-bottom: 1px solid rgba(41, 121, 255, 0.1);
         }
 
         .navbar-brand {
@@ -45,9 +46,9 @@
         }
 
         .back-btn {
-            background: var(--secondary-color);
+            background: rgba(41, 121, 255, 0.1);
             color: white;
-            border: none;
+            border: 1px solid rgba(41, 121, 255, 0.2);
             padding: 0.5rem 1rem;
             border-radius: 8px;
             text-decoration: none;
@@ -58,17 +59,19 @@
         }
 
         .back-btn:hover {
-            background: #2563eb;
+            background: rgba(41, 121, 255, 0.2);
             color: white;
             transform: translateY(-2px);
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.2);
         }
 
         /* Page Header */
         .page-header {
-            background: linear-gradient(135deg, var(--secondary-color), #1d4ed8);
+            background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
             color: white;
             padding: 3rem 0;
             margin-bottom: 3rem;
+            border-bottom: 1px solid rgba(41, 121, 255, 0.1);
         }
 
         .page-header h1 {
@@ -85,19 +88,19 @@
 
         /* Contact Cards */
         .contact-card {
-            background: white;
+            background: #0a0a0a;
             border-radius: 20px;
             padding: 2.5rem;
             margin-bottom: 2rem;
             box-shadow: var(--card-shadow);
             transition: all 0.4s ease;
-            border: 2px solid transparent;
+            border: 1px solid rgba(255, 255, 255, 0.05);
             height: 100%;
         }
 
         .contact-card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 20px rgba(41, 121, 255, 0.2);
             border-color: var(--accent-color);
         }
 
@@ -111,7 +114,8 @@
             font-size: 2rem;
             color: white;
             margin: 0 auto 1.5rem;
-            background: linear-gradient(135deg, var(--accent-color), #059669);
+            background: linear-gradient(135deg, #1a1a1a, #333);
+            border: 1px solid rgba(41, 121, 255, 0.3);
         }
 
         .contact-card h3 {
@@ -131,7 +135,7 @@
             display: flex;
             align-items: center;
             margin-bottom: 1rem;
-            color: #6b7280;
+            color: #9ca3af;
         }
 
         .contact-info li i {
@@ -143,7 +147,7 @@
         }
 
         .contact-info li a {
-            color: #6b7280;
+            color: #9ca3af;
             text-decoration: none;
             transition: color 0.3s ease;
         }
@@ -154,10 +158,11 @@
 
         /* Contact Form */
         .contact-form {
-            background: white;
+            background: #0a0a0a;
             border-radius: 20px;
             padding: 2.5rem;
             box-shadow: var(--card-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .form-title {
@@ -174,15 +179,19 @@
         }
 
         .form-control, .form-select {
-            border: 2px solid #e5e7eb;
+            background: #050505;
+            border: 1px solid #333;
+            color: #e5e7eb;
             border-radius: 12px;
             padding: 0.75rem 1rem;
             transition: all 0.3s ease;
         }
 
         .form-control:focus, .form-select:focus {
+            background: #050505;
+            color: #fff;
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.2);
             outline: none;
         }
 
@@ -194,32 +203,34 @@
             font-weight: 600;
             transition: all 0.3s ease;
             width: 100%;
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.3);
         }
 
         .btn-primary:hover {
-            background: #059669;
+            background: #2962ff;
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 20px rgba(41, 121, 255, 0.6);
         }
 
         /* Map Section */
         .map-section {
-            background: white;
+            background: #0a0a0a;
             border-radius: 20px;
             padding: 2rem;
             margin-bottom: 2rem;
             box-shadow: var(--card-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .map-container {
             height: 400px;
             border-radius: 12px;
             overflow: hidden;
-            background: #e5e7eb;
+            background: #111;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #6b7280;
+            color: #555;
         }
 
         .map-placeholder {
@@ -234,11 +245,13 @@
 
         /* Hours Section */
         .hours-card {
-            background: linear-gradient(135deg, var(--accent-color), #059669);
+            background: #0a0a0a;
             color: white;
             border-radius: 20px;
             padding: 2.5rem;
             text-align: center;
+            border: 1px solid rgba(41, 121, 255, 0.3);
+            box-shadow: 0 0 20px rgba(41, 121, 255, 0.1);
         }
 
         .hours-card h3 {
@@ -257,7 +270,8 @@
             justify-content: space-between;
             align-items: center;
             padding: 0.5rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e5e7eb;
         }
 
         .hours-list li:last-child {

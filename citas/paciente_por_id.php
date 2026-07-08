@@ -1,5 +1,6 @@
 <?php
-require_once '../includes/db.php';
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/auth.php';
 
 header('Content-Type: application/json');
 
@@ -14,8 +15,7 @@ if ($paciente_id === false || $paciente_id <= 0) {
 
 try {
     // 2. Preparar y ejecutar la consulta para evitar inyección SQL
-    // Se usan los campos correctos: nombre, apellido, correo, telefono, fecha_nacimiento
-    $stmt = $conn->prepare("SELECT nombre, apellido, telefono, correo, fecha_nacimiento FROM portal_pacientes WHERE id = ?");
+    $stmt = $conn->prepare("SELECT nombre, apellido_paterno, apellido_materno, apellido, telefono, correo, fecha_nacimiento, usuario_id, tel_emergencia, rfc, direccion, motivo_consulta, alergias, medicamentos FROM portal_pacientes WHERE id = ?");
     if (!$stmt) {
         throw new Exception("Error al preparar la consulta: " . $conn->error);
     }
@@ -26,16 +26,53 @@ try {
 
     // 3. Devolver los datos o un error si no se encuentra
     if ($paciente = $result->fetch_assoc()) {
+        // Verificar permiso de acceso al paciente
+        $allowed = obtenerIdsPermitidos();
+        if ($allowed === null) {
+            // ok
+        } elseif (is_array($allowed) && in_array('PARENT_ONLY', $allowed)) {
+            $parent = $_SESSION['id_padre'] ?? null;
+            if (!$parent || intval($paciente['usuario_id']) !== intval($parent)) {
+                http_response_code(403); echo json_encode(['error'=>'Acceso denegado']); exit;
+            }
+        } elseif (is_array($allowed) && in_array('SELF_AND_CHILDREN', $allowed)) {
+            $self = $_SESSION['usuario_id'] ?? 0;
+            // permitir si usuario_id == self o usuario_id in (children)
+            $owner = intval($paciente['usuario_id']);
+            if ($owner !== intval($self)) {
+                // comprobar hijos
+                $stmtC = $conn->prepare("SELECT COUNT(*) as c FROM agenda_usuarios WHERE id = ? AND id_padre = ?");
+                $stmtC->bind_param('ii', $owner, $self);
+                $stmtC->execute(); $r = $stmtC->get_result()->fetch_assoc();
+                $stmtC->close();
+                if (intval($r['c']) === 0) { http_response_code(403); echo json_encode(['error'=>'Acceso denegado']); exit; }
+            }
+        } elseif (is_array($allowed) && count($allowed) > 0) {
+            $owner = intval($paciente['usuario_id']);
+            $allowed_ints = array_map('intval', $allowed);
+            if (!in_array($owner, $allowed_ints)) { http_response_code(403); echo json_encode(['error'=>'Acceso denegado']); exit; }
+        }
         // Combinar nombre y apellido para el campo 'nombre' del formulario
         // y mapear 'correo' a 'email' para que coincida con el JavaScript
+        $ap_p = $paciente['apellido_paterno'];
+        $ap_m = $paciente['apellido_materno'];
+        if (empty($ap_p) && !empty($paciente['apellido'])) { $ap_p = $paciente['apellido']; }
+
         $response_data = [
-            'nombre' => trim(($paciente['nombre'] ?? '') . ' ' . ($paciente['apellido'] ?? '')),
+            'nombre' => $paciente['nombre'],
+            'apellido_paterno' => $ap_p,
+            'apellido_materno' => $ap_m,
             'telefono' => $paciente['telefono'],
             'email' => $paciente['correo'], // Mapeo de correo a email
-            'fecha_nacimiento' => $paciente['fecha_nacimiento']
+            'fecha_nacimiento' => $paciente['fecha_nacimiento'],
+            'tel_emergencia' => $paciente['tel_emergencia'],
+            'rfc' => $paciente['rfc'],
+            'direccion' => $paciente['direccion'],
+            'motivo_consulta' => $paciente['motivo_consulta'],
+            'alergias' => $paciente['alergias'],
+            'medicamentos' => $paciente['medicamentos']
         ];
         echo json_encode($response_data);
-        echo json_encode($paciente);
     } else {
         http_response_code(404); // Not Found
         echo json_encode(['error' => 'Paciente no encontrado.']);

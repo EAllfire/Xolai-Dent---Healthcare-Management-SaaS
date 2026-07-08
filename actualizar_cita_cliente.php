@@ -110,6 +110,14 @@ try {
         $stmt_update->bind_param("sssii", $fecha, $hora_inicio, $hora_fin, $estado_id, $cita_id);
         
         if ($stmt_update->execute()) {
+            // Sincronizar cambios con Apple Calendar
+            try {
+                require_once __DIR__ . "/includes/icloud_functions.php";
+                syncCitaToAppleCalendar($conn, $cita_id);
+            } catch (Throwable $e) {
+                error_log("Error al sincronizar cita $cita_id tras actualizar en cliente: " . $e->getMessage());
+            }
+
             echo json_encode(['success' => true, 'message' => 'Cita actualizada correctamente.']);
         } else {
             echo json_encode(['success' => false, 'error' => 'Error al actualizar la cita: ' . $stmt_update->error]);

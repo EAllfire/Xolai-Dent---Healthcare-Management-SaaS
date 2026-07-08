@@ -16,27 +16,56 @@ set_exception_handler(function ($exception) {
 
 try {
     require_once __DIR__ . "/includes/db.php";
+    require_once __DIR__ . "/includes/auth.php";
+    session_start();
 
-    // --- FILTRO DE PERÍODO ---
+    $usuario_id_real = $_SESSION['usuario_id'] ?? 0;
+    $usuario_tipo = $_SESSION['usuario_tipo'] ?? 'usuario';
+    $allowed = obtenerIdsPermitidos();
+
     $periodo = $_GET['periodo'] ?? 'all';
-    $where_clause = '';
+    $where_conditions = [];
+    $params = [];
+    $types = '';
 
     if ($periodo === 'today') {
-        // Filtra por la fecha actual
-        $where_clause = " WHERE c.fecha = CURDATE()";
+        $where_conditions[] = "c.fecha = CURDATE()";
     } elseif ($periodo === 'week') {
-        // Filtra por la semana actual (de lunes a domingo)
-        // YEARWEEK(fecha, 1) considera que la semana empieza en lunes
-        $where_clause = " WHERE YEARWEEK(c.fecha, 1) = YEARWEEK(CURDATE(), 1)";
+        $where_conditions[] = "YEARWEEK(c.fecha, 1) = YEARWEEK(CURDATE(), 1)";
     } elseif ($periodo === 'custom_week' && isset($_GET['fecha'])) {
-        // Filtra por la semana de la fecha proporcionada
         $fecha_seleccionada = $_GET['fecha'];
-        // Validar que la fecha tenga el formato correcto para seguridad
         if (preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/", $fecha_seleccionada)) {
-            $where_clause = " WHERE YEARWEEK(c.fecha, 1) = YEARWEEK('{$conn->real_escape_string($fecha_seleccionada)}', 1)";
+            $where_conditions[] = "YEARWEEK(c.fecha, 1) = YEARWEEK(?, 1)";
+            $params[] = $fecha_seleccionada;
+            $types .= 's';
         }
     }
     // Si es 'all', no se añade cláusula WHERE y se obtienen todas las citas.
+
+    // Construir la cláusula WHERE solo si hay condiciones
+    $whereSQL = "";
+    if (!empty($where_conditions)) {
+        $whereSQL = "WHERE " . implode(' AND ', $where_conditions);
+    }
+
+    // Aplicar filtro por propietario/clínica según helper
+    if ($allowed === null) {
+        // no extra filter
+    } elseif (is_array($allowed) && in_array('PARENT_ONLY', $allowed)) {
+        $parent = $_SESSION['id_padre'] ?? null;
+        if ($parent) {
+            $whereSQL = ($whereSQL ? $whereSQL . ' AND ' : 'WHERE ') . "c.usuario_id = " . intval($parent);
+        } else {
+            // fallback: no results
+            echo json_encode([]); exit;
+        }
+    } elseif (is_array($allowed) && in_array('SELF_AND_CHILDREN', $allowed)) {
+        $self = $_SESSION['usuario_id'] ?? 0;
+        $whereSQL = ($whereSQL ? $whereSQL . ' AND ' : 'WHERE ') . "(c.usuario_id = " . intval($self) . " OR c.usuario_id IN (SELECT id FROM agenda_usuarios WHERE id_padre = " . intval($self) . "))";
+    } elseif (is_array($allowed) && count($allowed) > 0) {
+        $ids = implode(',', array_map('intval', $allowed));
+        $whereSQL = ($whereSQL ? $whereSQL . ' AND ' : 'WHERE ') . "c.usuario_id IN ($ids)";
+    }
 
     // Consulta SQL ajustada y más segura, similar a la de citas_json.php
     $sql = "
@@ -49,10 +78,15 @@ try {
             c.url_identificacion,
             c.url_orden_medica,
             p.nombre AS paciente_nombre,
+            p.apellido_paterno,
+            p.apellido_materno,
             p.apellido AS paciente_apellido,
+            p.origen AS paciente_origen,
             s.nombre AS servicio_nombre,
             m.nombre AS modalidad_nombre,
-            e.nombre AS estado_nombre
+            e.nombre AS estado_nombre,
+            u.nombre AS medico_nombre,
+            u_rec.nombre AS recomendado_nombre
         FROM 
             agenda_citas c
         LEFT JOIN 
@@ -63,12 +97,21 @@ try {
             agenda_modalidades m ON c.modalidad_id = m.id
         LEFT JOIN 
             agenda_estado_cita e ON c.estado_id = e.id
-        {$where_clause}
+        LEFT JOIN
+            agenda_usuarios u ON c.profesional_id = u.id
+        LEFT JOIN
+            agenda_usuarios u_rec ON p.recomendado_por_id = u_rec.id
+        $whereSQL
         ORDER BY 
             c.fecha DESC, c.hora_inicio DESC
     ";
 
-    $result = $conn->query($sql);
+    $stmt = $conn->prepare($sql);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     if ($result === false) {
         throw new Exception('Error en la consulta a la base de datos: ' . $conn->error);
@@ -90,7 +133,9 @@ try {
         $row['estado_color'] = $colores_map[$estado_lower] ?? '#6c757d'; // Gris por defecto
 
         // Crear nombre completo del paciente
-        $row['paciente_nombre_completo'] = trim(($row['paciente_nombre'] ?? '') . ' ' . ($row['paciente_apellido'] ?? ''));
+        $ap_p = $row['apellido_paterno'] ?: ($row['paciente_apellido'] ?? '');
+        $ap_m = $row['apellido_materno'] ?? '';
+        $row['paciente_nombre_completo'] = trim(($row['paciente_nombre'] ?? '') . ' ' . $ap_p . ' ' . $ap_m);
         
         $citas[] = $row;
     }

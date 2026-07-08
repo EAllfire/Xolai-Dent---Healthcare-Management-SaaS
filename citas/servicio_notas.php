@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/db.php';
+require_once __DIR__ . '/../includes/db.php';
 header('Content-Type: application/json');
 
 $servicio_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -9,7 +9,7 @@ if ($servicio_id <= 0) {
     exit;
 }
 
-$stmt = $conn->prepare("SELECT notas FROM portal_servicios WHERE id = ?");
+$stmt = $conn->prepare("SELECT descripcion FROM portal_servicios WHERE id = ?");
 $stmt->bind_param("i", $servicio_id);
 $stmt->execute();
 $stmt->bind_result($notas);

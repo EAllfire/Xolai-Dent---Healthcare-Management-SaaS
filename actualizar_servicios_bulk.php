@@ -1,13 +1,12 @@
 <?php
 header('Content-Type: application/json');
 require_once 'includes/db.php';
+require_once 'includes/auth.php';
 
 // Verificar que solo los admins puedan acceder
 session_start();
-if (!isset($_SESSION['usuario_tipo']) || !in_array($_SESSION['usuario_tipo'], ['admin'])) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Acceso no autorizado.']);
-    exit;
+if (!puedeRealizar('gestionar_servicios')) {
+ 
 }
 
 $data = json_decode(file_get_contents('php://input'), true);

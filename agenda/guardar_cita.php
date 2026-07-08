@@ -5,10 +5,17 @@ error_reporting(E_ALL);
 header('Content-Type: application/json');
 
 // includes (usar require_once para evitar includes múltiples)
-require_once __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/debug_log.php';
-require_once __DIR__ . '/includes/whatsapp_functions.php';
-require_once __DIR__ . "/includes/email_functions.php";
+// Detectar si estamos en una subcarpeta y ajustar la ruta de includes
+$base_path = __DIR__;
+if (!file_exists($base_path . '/includes/db.php') && file_exists($base_path . '/../includes/db.php')) {
+    $base_path = dirname(__DIR__); // Subir un nivel
+}
+
+require_once $base_path . '/includes/db.php';
+require_once $base_path . '/includes/debug_log.php';
+require_once $base_path . '/includes/whatsapp_functions.php';
+require_once $base_path . "/includes/email_functions.php";
+
 // require_once __DIR__ . '/includes/email_functions.php'; // opcional por ahora
 
 // leer JSON
@@ -25,6 +32,7 @@ $estado_id = (int) ($input["estado_id"] ?? null); // Convierto a entero
 $tipo = $input["tipo"] ?? "normal";
 $nota_interna = $input["nota_interna"] ?? null;
 $nota_paciente = $input["nota_paciente"] ?? null;
+$atencion_especial = (int) ($input["atencion_especial"] ?? 0); // Recibimos el nuevo campo
 
 // campos NULL
 $profesional_id = null;
@@ -97,7 +105,7 @@ if ($paciente_id > 0) {
 // --- FIN: Lógica de Edad para Notificación ---
 
 // preparar INSERT (ajusta tipos si tu DB los requiere)
-$sql = "INSERT INTO agenda_citas (fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, tipo, token, nota_interna, nota_paciente, url_identificacion, url_orden_medica) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+$sql = "INSERT INTO agenda_citas (fecha, hora_inicio, hora_fin, paciente_id, profesional_id, servicio_id, modalidad_id, estado_id, tipo, token, nota_interna, nota_paciente, url_identificacion, url_orden_medica, atencion_especial) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 $stmt = $conn->prepare($sql);
 
 if (!$stmt) {
@@ -107,7 +115,7 @@ if (!$stmt) {
 }
 
 $stmt->bind_param(
-    "sssiiisiisssss",
+    "sssiiisiisssssi",
     $fecha,
     $hora_inicio,
     $hora_fin,
@@ -120,8 +128,9 @@ $stmt->bind_param(
     $token,
     $nota_interna,
     $nota_paciente,
-    $url_identificacion,
-    $url_orden_medica
+    $url_identificacion, // Este campo no se está usando en el frontend, pero se mantiene para compatibilidad
+    $url_orden_medica,   // Este campo no se está usando en el frontend, pero se mantiene para compatibilidad
+    $atencion_especial   // Añadimos el nuevo parámetro
 );
 
 if (!$stmt->execute()) {
@@ -154,7 +163,7 @@ $res3 = $conn->query("SELECT nombre FROM portal_servicios WHERE id = " . (int)$s
 $servicio = $res3 ? ($res3->fetch_assoc()['nombre'] ?? '') : '';
 
 // enviar whatsapp (silencioso)
-
+/*
 try {
     log_message("[GUARDAR] Enviando WPP a $telefono_paciente para cita $id_cita");
     
@@ -176,7 +185,7 @@ try {
         $url_reprogramar,
         $url_cancelar
     );
-    log_message("[GUARDAR] Resultado WPP: " . json_encode($wpp_res));
+    log_message("[GUARDAR] Resultado WPP: " . json_encode($wpp_res ?? 'No se pudo obtener el resultado'));
 } catch (Throwable $e) {
     log_message("[GUARDAR] Excepción WPP: " . $e->getMessage());
 }
@@ -200,11 +209,12 @@ if (!empty($email_paciente) && filter_var($email_paciente, FILTER_VALIDATE_EMAIL
         $email_paciente,
         "Confirmación de Cita Hospital Angeles Cuauhtemoc",
         $emailVars
-    );
+    ); 
     log_email("[GUARDAR] Resultado EMAIL: " . json_encode($resultadoEmail));
 } else {
     log_email("[GUARDAR] No se envía email: correo vacío o inválido ($email_paciente)");
 }
+*/
 
 // final
 echo json_encode(["success" => true, "message" => "Cita guardada correctamente", "id" => $id_cita]);

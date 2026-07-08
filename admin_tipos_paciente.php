@@ -12,6 +12,11 @@ if (!puedeRealizar('gestionar_usuarios')) {
 $usuario = obtenerUsuarioActual();
 $user_nombre = $usuario['nombre'] ?? 'Usuario';
 $user_tipo = $usuario['tipo'] ?? 'usuario';
+
+// Configuración del header
+$show_calendar = true;
+$show_back = true;
+$show_admin_tools = true;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -21,73 +26,207 @@ $user_tipo = $usuario['tipo'] ?? 'usuario';
     <title>Catálogo de Tipos de Paciente - Hospital Angeles</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+            color: #e5e7eb;
             padding-top: 100px;
         }
+        
+        /* Header Styles */
         .main-header {
-            background: #1275a0;
+            background: rgba(5, 5, 5, 0.95);
+            backdrop-filter: blur(10px);
             color: white;
             height: 80px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 20px;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            font-family: Arial, sans-serif;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 1050;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            border-bottom: 1px solid rgba(41, 121, 255, 0.1);
         }
+        
         .header-left, .header-right {
             display: flex;
             align-items: center;
             gap: 15px;
         }
+        
         .logo-section {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            text-align: center;
         }
-        .header-logo img { max-height: 60px; }
-        .logo-text { margin: 0; font-size: 24px; font-weight: bold; }
-        .btn-header { color: white; text-decoration: none; font-weight: bold; padding: 0.5rem 1rem; font-size: 13px; }
-        .container-custom { max-width: 1200px; margin: 2rem auto; }
-        .page-title { font-size: 2rem; font-weight: 600; margin-bottom: 2rem; text-align: center; }
-        .table-container {
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 1.5rem;
+        
+        .header-logo img {
+            max-height: 60px;
+            margin-left: 10px;
+            width: auto;
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.1)) brightness(1.1);
         }
-        .actions-bar {
+        
+        .logo-text {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+        
+        .btn-header {
+            color: #e5e7eb;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            background: rgba(41, 121, 255, 0.1);
+            border: 1px solid rgba(41, 121, 255, 0.2);
+            padding: 0.5rem 1rem;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 6px;
+            text-shadow: 0 0 5px rgba(41, 121, 255, 0.3);
+        }
+        
+        .btn-header:hover {
+            background: rgba(41, 121, 255, 0.2);
+            color: #fff;
+            border-color: rgba(41, 121, 255, 0.5);
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.2);
+        }
+
+        .container-custom { max-width: 1200px; margin: 0 auto; padding: 0 15px; }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 600;
             margin-bottom: 1.5rem;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .table-container {
+            background: #0a0a0a;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .actions-bar {
+            background: #0a0a0a;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
+        
+        /* Estilos de Tabla Oscura */
+        .table {
+            color: #e5e7eb;
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #9ca3af;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 1rem;
+            border-top: none;
+        }
+
+        .table td {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(41, 121, 255, 0.05);
+            color: #e5e7eb;
+        }
+
+        /* Inputs y Buscador */
+        .form-control {
+            background: #000000;
+            border: 1px solid #333;
+            color: #e5e7eb;
+            border-radius: 8px;
+        }
+
+        .form-control:focus {
+            background: #000000;
+            color: #fff;
+            border-color: #2979ff;
+            box-shadow: 0 0 0 2px rgba(41, 121, 255, 0.2);
+        }
+        
+        .btn-secondary {
+            background: #1f2937;
+            border-color: #374151;
+            color: #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #374151;
+            border-color: #4b5563;
+        }
+        
+        /* Modal Oscuro */
+        .modal-content {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #e5e7eb;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #333;
+            background: #111;
+        }
+        
+        .modal-footer {
+            border-top: 1px solid #333;
+            background: #111;
+        }
+        
+        .close {
+            color: #e5e7eb;
+            text-shadow: none;
+            opacity: 0.7;
+        }
+        
+        .close:hover {
+            color: #fff;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="main-header">
-        <div class="header-left">
-            <div class="header-logo">
-                <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles">
-            </div>
-        </div>
-        <div class="logo-section">
-            <div class="logo-text">IMAGENOLOGÍA</div>
-        </div>
-        <div class="header-right">
-            <a href="index.php" class="btn-header"><i class="fas fa-calendar"></i> Calendario</a>
-            <a href="panel_admin.php" class="btn-header"><i class="fas fa-cog"></i> Panel de Administración</a>
-            <a href="logout.php" class="btn-header"><i class="fas fa-sign-out-alt"></i> Salir</a>
-        </div>
-    </header>
+    <?php include 'includes/header.php'; ?>
 
     <!-- Main Content -->
     <div class="container-custom">

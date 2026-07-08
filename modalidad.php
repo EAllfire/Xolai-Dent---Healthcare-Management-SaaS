@@ -1,266 +1,132 @@
+<?php
+session_start();
+require_once 'includes/db.php';
+
+$modalidad_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$modalidad_nombre = isset($_GET['nombre']) ? htmlspecialchars($_GET['nombre']) : 'Servicios';
+$portal_usuario_id = isset($_GET['portal_usuario_id']) ? (int)$_GET['portal_usuario_id'] : null;
+
+if ($modalidad_id === 0) {
+    die("Error: Modalidad no especificada.");
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Servicios - Hospital Angeles</title>
+    <title>Servicios de <?php echo $modalidad_nombre; ?> - Hospital Angeles</title>
     
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --primary-color: #1275a0;
-            --secondary-color: #3b82f6;
-            --accent-color: #0f5f85 100%;
-            --light-bg: #f8fafc;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --primary-color: #ffffff;
+            --secondary-color: #a0a0a0;
+            --accent-color: #2979ff;
+            --gradient-bg: #000000;
+            --light-bg: #000000;
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
-
         body {
             font-family: 'Inter', sans-serif;
-            line-height: 1.6;
-            color: #374151;
             background: var(--light-bg);
             padding-top: 100px;
         }
-
-        /* Header */
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(10, 10, 10, 0.95);
             backdrop-filter: blur(10px);
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
             padding: 1rem 0;
+            border-bottom: 1px solid rgba(41, 121, 255, 0.1);
         }
-
         .navbar-brand {
             font-weight: 700;
-            color: var(--primary-color) !important;
-            font-size: 1.5rem;
+            color: white !important;
+            text-decoration: none;
         }
-
-        .back-btn {
-            background: var(--secondary-color);
+        .logo-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-left: 10px;
             color: white;
-            border: none;
+        }
+        .back-btn {
+            background: rgba(41, 121, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(41, 121, 255, 0.2);
             padding: 0.5rem 1rem;
             border-radius: 8px;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
             transition: all 0.3s ease;
         }
-
-        .back-btn:hover {
-            background: #2563eb;
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        /* Page Header */
-        .page-header {
-            background: linear-gradient(135deg, var(--primary-color), #374151);
-            color: white;
-            padding: 3rem 0;
-            margin-bottom: 3rem;
-        }
-
-        .page-header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .page-header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 0;
-        }
-
-        /* Service Cards */
+        .back-btn:hover { background: rgba(41, 121, 255, 0.2); color: white; box-shadow: 0 0 10px rgba(41, 121, 255, 0.2); }
+        .page-header { text-align: center; margin-bottom: 3rem; }
+        .page-header h1 { font-size: 2.5rem; font-weight: 700; color: var(--primary-color); }
+        .page-header p { color: #9ca3af; }
         .service-card {
-            background: white;
-            border-radius: 16px;
+            background: #0a0a0a;
+            border-radius: 20px;
             padding: 2rem;
-            margin-bottom: 2rem;
             box-shadow: var(--card-shadow);
             transition: all 0.3s ease;
-            border: 2px solid transparent;
+            cursor: pointer;
             height: 100%;
-        }
-
-        .service-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.15);
-            border-color: var(--secondary-color);
-        }
-
-        .service-header {
             display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
-
+        .service-card:hover { transform: translateY(-5px); border-color: var(--accent-color); box-shadow: 0 0 20px rgba(41, 121, 255, 0.2); }
+        .service-card-header { display: flex; align-items: center; margin-bottom: 1rem; }
         .service-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
             color: white;
+            font-size: 1.5rem;
             margin-right: 1rem;
             flex-shrink: 0;
         }
-
-        .service-info h3 {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 0.25rem;
-        }
-
-        .service-duration {
-            color: #6b7280;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .service-description {
-            color: #6b7280;
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
-        }
-
-        .service-details {
-            background: var(--light-bg);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .detail-item {
+        .service-card h3 { font-size: 1.3rem; font-weight: 600; color: var(--primary-color); margin: 0; }
+        .service-card p { color: #9ca3af; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .service-meta {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.5rem;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #333;
         }
-
-        .detail-item:last-child {
-            margin-bottom: 0;
+        .service-price {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
         }
-
-        .detail-label {
-            font-weight: 500;
-            color: var(--primary-color);
-        }
-
-        .detail-value {
-            color: #6b7280;
-        }
-
-        .book-btn {
-            background: linear-gradient(135deg, var(--accent-color), #0f5f85 100%);
+        .service-duration { font-size: 0.9rem; color: #9ca3af; font-weight: 500; }
+        .btn-reservar {
+            background: var(--accent-color);
             color: white;
             border: none;
-            padding: 0.75rem 2rem;
-            border-radius: 12px;
+            border-radius: 50px;
+            padding: 0.75rem 1.5rem;
             font-weight: 600;
-            width: 100%;
+            text-decoration: none;
+            display: inline-block;
             transition: all 0.3s ease;
-            cursor: pointer;
+            box-shadow: 0 0 10px rgba(41, 121, 255, 0.3);
         }
-
-        .book-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px -4px #0f5f85 100%;
-        }
-
-        /* Loading State */
-        .loading-card {
-            background: white;
-            border-radius: 16px;
-            padding: 3rem 2rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--card-shadow);
-            text-align: center;
-        }
-
-        .spinner-border {
-            color: var(--secondary-color);
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: white;
-            border-radius: 16px;
-            box-shadow: var(--card-shadow);
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            color: #d1d5db;
-            margin-bottom: 1rem;
-        }
-
-        .empty-state h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-        }
-
-        .empty-state p {
-            color: #6b7280;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .page-header h1 {
-                font-size: 2rem;
-            }
-            
-            .page-header p {
-                font-size: 1rem;
-            }
-
-            .service-card {
-                padding: 1.5rem;
-            }
-
-            .service-header {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .service-icon {
-                margin-right: 0;
-                margin-bottom: 1rem;
-            }
-        }
-
-        /* Animation */
-        .fade-in {
-            animation: fadeInUp 0.6s ease-out;
-        }
-
+        .btn-reservar:hover { background: #2962ff; box-shadow: 0 0 20px rgba(41, 121, 255, 0.6); }
+        .fade-in { animation: fadeInUp 0.6s ease-out; }
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -268,263 +134,134 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="cliente.php">
-                <img src="images/logo.png" alt="Hospital Angeles" height="50" class="me-3">
-                <div>
-                    <div style="font-size: 1.2rem; font-weight: 700;">Hospital Angeles</div>
-                    <div style="font-size: 0.8rem; color: #6b7280; font-weight: 400;">Imagenología</div>
-                </div>
+            <a class="navbar-brand d-flex align-items-center" href="cliente.php<?php echo $portal_usuario_id ? '?portal_usuario_id=' . $portal_usuario_id : ''; ?>">
+                <img src="https://angelescuauhtemoc.com/wp-content/uploads/2020/09/logo-50-300x187.png" alt="Hospital Angeles" height="60">
+                <div class="logo-text">IMAGENOLOGÍA</div>
             </a>
-            
-            <a href="cliente.php" class="back-btn">
-                <i class="fas fa-arrow-left"></i>
-                Regresar
+            <a href="cliente.php<?php echo $portal_usuario_id ? '?portal_usuario_id=' . $portal_usuario_id : ''; ?>" class="back-btn">
+                <i class="fas fa-arrow-left me-2"></i>Regresar
             </a>
         </div>
     </nav>
 
-    <!-- Page Header -->
-    <section class="page-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h1 id="modalidad-titulo">Cargando servicios...</h1>
-                    <p id="modalidad-descripcion">Selecciona el servicio que necesitas</p>
-                </div>
-                <div class="col-lg-4 text-lg-end">
-                    <div id="modalidad-icono" class="d-inline-block" style="font-size: 4rem; opacity: 0.7;">
-                        <i class="fas fa-stethoscope"></i>
-                    </div>
-                </div>
-            </div>
+    <!-- Main Content -->
+    <div class="container" style="margin-top: 3rem; margin-bottom: 3rem;">
+        <div class="page-header fade-in">
+            <h1><?php echo $modalidad_nombre; ?></h1>
+            <p>Selecciona el estudio que necesitas para continuar con tu reservación.</p>
         </div>
-    </section>
 
-    <!-- Services Section -->
-    <div class="container mb-5">
-        <div class="row" id="servicios-container">
-            <!-- Loading State -->
-            <div class="col-12" id="loading-state">
-                <div class="loading-card">
-                    <div class="spinner-border mb-3" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
-                    <p class="mb-0">Cargando servicios disponibles...</p>
-                </div>
+        <div class="row" id="servicios-grid">
+            <!-- Los servicios se cargarán aquí -->
+            <div class="col-12 text-center">
+                <p>Cargando servicios...</p>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script>
-        // Obtener parámetros de la URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const modalidadId = urlParams.get('id');
-        const modalidadNombre = urlParams.get('nombre');
-
-        // Colores e iconos para modalidades
-        const modalidadConfig = {
-            'radiografia': { 
-                color: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                icon: 'fas fa-x-ray',
-                descripcion: 'Estudios de rayos X con equipos digitales de alta resolución'
-            },
-            'resonancia': { 
-                color: 'linear-gradient(135deg, #6b7280, #4b5563)',
-                icon: 'fas fa-brain',
-                descripcion: 'Resonancia magnética con tecnología de vanguardia'
-            },
-            'tomografia': { 
-                color: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                icon: 'fas fa-lungs',
-                descripcion: 'Tomografía computarizada multicorte'
-            },
-            'mastografia': { 
-                color: 'linear-gradient(135deg, #ec4899, #db2777)',
-                icon: 'fas fa-heartbeat',
-                descripcion: 'Mastografía digital para detección temprana'
-            },
-            'sonografia': { 
-                color: 'linear-gradient(135deg, #06b6d4, #0891b2)',
-                icon: 'fas fa-baby',
-                descripcion: 'Ultrasonido con equipos de última generación'
-            },
-            'laboratorios': { 
-                color: 'linear-gradient(135deg, #10b981, #059669)',
-                icon: 'fas fa-flask',
-                descripcion: 'Análisis clínicos con tecnología automatizada'
-            },
-            'default': { 
-                color: 'linear-gradient(135deg, #6b7280, #4b5563)',
-                icon: 'fas fa-stethoscope',
-                descripcion: 'Servicios especializados de diagnóstico'
-            }
+        // Misma lógica de íconos y colores que en cliente.php
+        const modalidadColors = {
+            'radiograf': 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+            'tomografia': 'linear-gradient(135deg, #f59e0b, #d97706)',
+            'mastografia': 'linear-gradient(135deg, #ec4899, #db2777)',
+            'sonografia': 'linear-gradient(135deg, #06b6d4, #0891b2)',
+            'laboratorio': 'linear-gradient(135deg, #6b7280, #4b5563)',
+            'default': 'linear-gradient(135deg, #6b7280, #4b5563)'
         };
 
-        function getModalidadConfig(nombre) {
+        const modalidadIcons = {
+            'radiograf': 'fas fa-diagnoses',
+            'resonancia': 'fas fa-brain',
+            'tomograf': 'fas fa-lungs-virus',
+            'mastograf': 'fas fa-venus',
+            'sonograf': 'fas fa-wave-square',
+            'laboratorio': 'fas fa-flask',
+            'default': 'fas fa-stethoscope'
+        };
+
+        function getModalidadColor(nombre) {
             const nombreLower = nombre.toLowerCase();
-            for (const [key, config] of Object.entries(modalidadConfig)) {
-                if (nombreLower.includes(key)) {
-                    return config;
-                }
+            for (const [key, color] of Object.entries(modalidadColors)) {
+                if (nombreLower.includes(key)) return color;
             }
-            return modalidadConfig.default;
+            return modalidadColors.default;
         }
 
-        // Cargar servicios de la modalidad
+        function getModalidadIcon(nombre) {
+            const nombreLower = nombre.toLowerCase();
+            if (nombreLower.includes('ultrasonido')) return modalidadIcons['sonograf'];
+            if (nombreLower.includes('radiolog')) return modalidadIcons['radiograf'];
+            for (const [key, icon] of Object.entries(modalidadIcons)) {
+                if (nombreLower.includes(key)) return icon;
+            }
+            return modalidadIcons.default;
+        }
+
         async function cargarServicios() {
+            const modalidadId = <?php echo $modalidad_id; ?>;
+            const modalidadNombre = "<?php echo $modalidad_nombre; ?>";
+            const portalUsuarioId = <?php echo $portal_usuario_id ?? 'null'; ?>;
+
+            const grid = document.getElementById('servicios-grid');
+            grid.innerHTML = '';
+
             try {
-                if (!modalidadId || !modalidadNombre) {
-                    mostrarError('Parámetros de modalidad no válidos');
-                    return;
-                }
-
-                // Configurar header de la página
-                const config = getModalidadConfig(modalidadNombre);
-                document.getElementById('modalidad-titulo').textContent = modalidadNombre;
-                document.getElementById('modalidad-descripcion').textContent = config.descripcion;
-                document.getElementById('modalidad-icono').innerHTML = `<i class="${config.icon}"></i>`;
-
-                // Cargar servicios
                 const response = await fetch(`citas/servicios_por_modalidad.php?modalidad_id=${modalidadId}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
                 const servicios = await response.json();
-                
-                // Ocultar loading
-                document.getElementById('loading-state').style.display = 'none';
-                
+
                 if (servicios.length === 0) {
-                    mostrarEstadoVacio();
+                    grid.innerHTML = '<div class="col-12 text-center"><p>No hay servicios disponibles para esta modalidad.</p></div>';
                     return;
                 }
 
-                mostrarServicios(servicios, config);
-                
-            } catch (error) {
-                console.error('Error cargando servicios:', error);
-                mostrarError('Error al cargar los servicios. Por favor, inténtalo de nuevo.');
-            }
-        }
+                const iconClass = getModalidadIcon(modalidadNombre);
+                const color = getModalidadColor(modalidadNombre);
 
-        function mostrarServicios(servicios, config) {
-            const container = document.getElementById('servicios-container');
-            
-            servicios.forEach((servicio, index) => {
-                const duracionTexto = servicio.duracion_minutos ? 
-                    `${servicio.duracion_minutos} minutos` : 'Consultar';
+                servicios.forEach(servicio => {
+                    const card = document.createElement('div');
+                    card.className = 'col-lg-4 col-md-6 mb-4';
+                    
+                    let reservarUrl = `reservar.php?tipo=servicio&servicio_id=${servicio.id}&servicio_nombre=${encodeURIComponent(servicio.nombre)}&modalidad_id=${modalidadId}&modalidad_nombre=${encodeURIComponent(modalidadNombre)}`;
+                    if (portalUsuarioId) {
+                        reservarUrl += `&portal_usuario_id=${portalUsuarioId}`;
+                    }
 
-                const precio = servicio.precio || 'Consultar';
-                
-                const card = document.createElement('div');
-                card.className = 'col-lg-6 col-xl-4 mb-4';
-                card.innerHTML = `
-                    <div class="service-card fade-in" style="animation-delay: ${index * 0.1}s">
-                        <div class="service-header">
-                            <div class="service-icon" style="background: ${config.color};">
-                                <i class="${config.icon}"></i>
-                            </div>
-                            <div class="service-info">
-                                <h3>${servicio.nombre}</h3>
-                                <div class="service-duration">
-                                    <i class="fas fa-clock"></i>
-                                    ${duracionTexto}
+                    const precioHtml = servicio.precio ? `<div class="service-price">$${parseFloat(servicio.precio).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</div>` : '';
+                    const duracionHtml = servicio.duracion_minutos ? `<div class="service-duration"><i class="fas fa-clock me-2"></i>${servicio.duracion_minutos} min</div>` : '';
+
+                    card.innerHTML = `
+                        <div class="service-card fade-in">
+                            <div>
+                                <div class="service-card-header">
+                                    <div class="service-icon" style="background: ${color};">
+                                        <i class="${iconClass}"></i>
+                                    </div>
+                                    <h3>${servicio.nombre}</h3>
+                                </div>
+                                <p>${servicio.descripcion || 'Estudio especializado para un diagnóstico preciso.'}</p>
+                                <div class="service-meta">
+                                    ${precioHtml}
+                                    ${duracionHtml}
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="service-description">
-                            ${servicio.descripcion || 'Servicio especializado con equipos de última generación para obtener resultados precisos y confiables.'}
-                        </div>
-                        
-                        <div class="service-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Duración:</span>
-                                <span class="detail-value">${duracionTexto}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Preparación:</span>
-                                <span class="detail-value">Consultar indicaciones</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Precio:</span>
-                                <span class="detail-value">${precio}</span>
+                            <div class="text-center">
+                                <a href="${reservarUrl}" class="btn-reservar">
+                                    <i class="fas fa-calendar-alt me-2"></i>Reservar
+                                </a>
                             </div>
                         </div>
-                        
-                        <button class="book-btn" onclick="reservarServicio(${servicio.id}, '${servicio.nombre.replace(/'/g, "\\'")}', ${modalidadId}, '${modalidadNombre.replace(/'/g, "\\'")}')">
-                            <i class="fas fa-calendar-plus me-2"></i>
-                            Reservar Cita
-                        </button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+                    `;
+                    grid.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error('Error cargando servicios:', error);
+                grid.innerHTML = '<div class="col-12 text-center"><p class="text-danger">Error al cargar los servicios.</p></div>';
+            }
         }
 
-        function mostrarEstadoVacio() {
-            const container = document.getElementById('servicios-container');
-            container.innerHTML = `
-                <div class="col-12">
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <h3>No hay servicios disponibles</h3>
-                        <p>No se encontraron servicios para esta modalidad en este momento.</p>
-                        <a href="cliente.php" class="btn btn-primary mt-3">
-                            <i class="fas fa-arrow-left me-2"></i>
-                            Regresar al inicio
-                        </a>
-                    </div>
-                </div>
-            `;
-        }
-
-        function mostrarError(mensaje) {
-            const container = document.getElementById('servicios-container');
-            container.innerHTML = `
-                <div class="col-12">
-                    <div class="empty-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Error</h3>
-                        <p>${mensaje}</p>
-                        <a href="cliente.php" class="btn btn-primary mt-3">
-                            <i class="fas fa-arrow-left me-2"></i>
-                            Regresar al inicio
-                        </a>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Función para reservar servicio
-        function reservarServicio(servicioId, servicioNombre, modalidadId, modalidadNombre) {
-            // Redirigir a página de reserva
-            const currentParams = new URLSearchParams(window.location.search);
-            const portalUsuarioId = currentParams.get('portal_usuario_id');
-
-            const params = new URLSearchParams({
-                tipo: 'servicio',
-                servicio_id: servicioId,
-                servicio_nombre: servicioNombre,
-                modalidad_id: modalidadId,
-                modalidad_nombre: modalidadNombre
-            });
-
-            // Si existe un portal_usuario_id, lo añadimos a los parámetros
-            if (portalUsuarioId) params.append('portal_usuario_id', portalUsuarioId);
-            
-            window.location.href = `reservar.php?${params.toString()}`;
-        }
-
-        // Inicializar página
-        document.addEventListener('DOMContentLoaded', function() {
-            cargarServicios();
-        });
+        document.addEventListener('DOMContentLoaded', cargarServicios);
     </script>
 </body>
 </html>

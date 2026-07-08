@@ -1,65 +1,45 @@
 <?php
-require_once("../includes/db.php");
+session_start();
+require_once __DIR__ . "/../includes/db.php";
 header('Content-Type: application/json; charset=utf-8');
 
-// Include imagen column (may be NULL) so frontend can render thumbnails
-$sql = "SELECT id, nombre, COALESCE(imagen, '') AS imagen FROM agenda_modalidades 
-        ORDER BY 
-        CASE 
-            WHEN nombre LIKE '%Radiografía%' THEN 1
-            WHEN nombre LIKE '%Resonancia%' THEN 2
-            WHEN nombre LIKE '%Tomografía%' THEN 3
-            WHEN nombre LIKE '%Mastografía%' THEN 4
-            WHEN nombre LIKE '%Sonografía%' THEN 5
-            WHEN nombre LIKE '%Laboratorios%' THEN 6
-            ELSE 9
-        END, nombre";
+// Limpiar buffer para evitar que errores PHP rompan el JSON
+error_reporting(0); 
+
+// Obtener el ID del usuario de la sesión.
+$usuario_id_real = $_SESSION['usuario_id'] ?? 0;
+$id_propietario = $_SESSION['id_padre'] ?? $usuario_id_real;
+$usuario_tipo = $_SESSION['usuario_tipo'] ?? 'usuario';
+
+if (!$usuario_id_real) {
+    echo json_encode([]);
+    exit;
+}
+
+$sql = "SELECT id, nombre, usuario_id, imagen 
+        FROM agenda_modalidades 
+        WHERE usuario_id = ? OR usuario_id IN (SELECT id FROM agenda_usuarios WHERE id_padre = ?)
+        ORDER BY nombre ASC";
         
-$result = $conn->query($sql);
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("ii", $id_propietario, $id_propietario);
+$stmt->execute();
+$result = $stmt->get_result();
 
 $recursos = [];
-
 while ($row = $result->fetch_assoc()) {
-    // Asignar colores por categoría
-    $color = '#1976d2'; // Por defecto
-    if (strpos($row['nombre'], 'Laboratorios') !== false) {
-        $color = '#388e3c'; // Verde para laboratorios
-    } elseif (strpos($row['nombre'], 'Radiografía') !== false) {
-        $color = '#1976d2'; // Azul para radiografía
-    } elseif (strpos($row['nombre'], 'Resonancia') !== false) {
-        $color = '#7b1fa2'; // Púrpura para resonancia
-    } elseif (strpos($row['nombre'], 'Tomografía') !== false) {
-        $color = '#5d4037'; // Marrón para tomografía
-    } elseif (strpos($row['nombre'], 'Mastografía') !== false) {
-        $color = '#e91e63'; // Rosa para mastografía
-    } elseif (strpos($row['nombre'], 'Sonografía') !== false) {
-        $color = '#00796b'; // Teal para sonografía
-    }
-
-    $img = '';
-    if (isset($row['imagen'])) $img = $row['imagen'];
-    // normalize image path and prefix base path so it works when app is in a subdirectory
-    if ($img && strpos($img, '://') === false) {
-        // Determine application base path. If this script is inside /citas, prefer the parent directory
-        $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-        if (basename($scriptDir) === 'citas') {
-            $appBase = rtrim(dirname($scriptDir), '/');
-        } else {
-            $appBase = $scriptDir;
-        }
-        if ($appBase === '' || $appBase === '/') {
-            $img = '/' . ltrim($img, '/');
-        } else {
-            $img = $appBase . '/' . ltrim($img, '/');
-        }
-    }
+    $color = '#1275a0'; // Color base para consultorios
+    if (strpos($row['nombre'], 'Laboratorio') !== false) $color = '#388e3c';
+    elseif (strpos($row['nombre'], 'Rayos') !== false) $color = '#1d4ed8';
+    
     $recursos[] = [
-        'id' => trim($row['id']),
-        'title' => trim($row['nombre']),
+        'id' => $row['id'],
+        'title' => $row['nombre'],
         'eventColor' => $color,
-        'imagen' => $img
+        'usuario_id' => $row['usuario_id'],
+        'imagen' => $row['imagen'] ? '/' . ltrim($row['imagen'], '/') : ''
     ];
 }
 
 echo json_encode($recursos);
-// no closing PHP tag to avoid accidental trailing whitespace
+?>

@@ -7,7 +7,7 @@ CREATE TABLE agenda_usuarios (
   nombre VARCHAR(100) NOT NULL,
   correo VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  tipo ENUM('admin','caja','lectura') NOT NULL
+  tipo ENUM('admin','caja','lectura','medico') NOT NULL
 );
 
 -- Insertar usuario administrador por defecto
@@ -170,6 +170,10 @@ CREATE TABLE agenda_citas (
   estado_id INT DEFAULT 5,
   nota_paciente TEXT,
   nota_interna TEXT,
+  apple_event_id VARCHAR(255) NULL,
+  paciente_nombre_text VARCHAR(255) NULL,
+  telefono_celular VARCHAR(255) NULL,
+  servicio_text VARCHAR(255) NULL,
   tipo VARCHAR(50),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

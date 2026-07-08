@@ -1,4 +1,5 @@
 <?php
+session_start();
 // --- MANEJADOR DE ERRORES GLOBAL ---
 // Esto captura cualquier error (incluso fatales) y lo convierte en una respuesta JSON.
 set_error_handler(function ($severity, $message, $file, $line) {
@@ -19,10 +20,15 @@ set_exception_handler(function ($exception) {
 
 header('Content-Type: application/json');
 
-try {    
+try {
     // Incluir la base de datos dentro del bloque try/catch
     // Esta es la corrección más importante para evitar el error HTML.
     require_once __DIR__ . '/includes/db.php';
+    require_once __DIR__ . '/includes/auth.php';
+
+    $user_tipo = $_SESSION['usuario_tipo'] ?? '';
+    $id_padre = $_SESSION['id_padre'] ?? null;
+    $puede_gestionar_bloqueos = in_array($user_tipo, ['superadmin', 'admin', 'medico', 'dentista', 'dentista_externo']) || (empty($id_padre) && $user_tipo === 'dentista');
     
     // Después de incluir db.php, verificamos si la conexión fue exitosa.
     // La variable $conn viene de db.php.
@@ -41,22 +47,31 @@ try {
     $cita_id = intval($cita_id);
 
     // Verificar que la cita existe
-    $stmt = $conn->prepare("SELECT id FROM agenda_citas WHERE id = ?");
+    $stmt = $conn->prepare("SELECT estado_id, tipo FROM agenda_citas WHERE id = ?");
     if ($stmt === false) {
         throw new Exception('Error al preparar la consulta de verificación.');
     }
     $stmt->bind_param("i", $cita_id);
     $stmt->execute();
     
-    // Usar store_result() para compatibilidad con servidores sin mysqlnd
-    $stmt->store_result();
-    
-    if ($stmt->num_rows === 0) {
-        // Usamos throw para que el error sea consistente
+    $stmt->bind_result($estado_id, $tipo_cita);
+    if (!$stmt->fetch()) {
         throw new Exception('La cita con el ID ' . $cita_id . ' no fue encontrada.');
     }
-    $stmt->close(); // Liberar el resultado
-    
+    $stmt->close();
+
+    if (($estado_id == 9 || $tipo_cita === 'bloqueo') && !$puede_gestionar_bloqueos) {
+        throw new Exception('No tiene permiso para eliminar bloqueos.');
+    }
+
+    // Sincronizar eliminación con Apple Calendar (antes de borrar físicamente la cita de la BD)
+    try {
+        require_once __DIR__ . '/includes/icloud_functions.php';
+        deleteCitaFromAppleCalendar($conn, $cita_id);
+    } catch (Throwable $e) {
+        error_log("Error al eliminar cita $cita_id en Apple Calendar: " . $e->getMessage());
+    }
+
     // Eliminar la cita
     $stmt = $conn->prepare("DELETE FROM agenda_citas WHERE id = ?");
     if ($stmt === false) {
