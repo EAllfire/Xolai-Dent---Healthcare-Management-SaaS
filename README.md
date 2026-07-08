@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Hospital Angeles - Sitio Web Público
 
 ## Descripción
@@ -71,3 +72,7 @@ public/
 - No requiere autenticación
 - Optimizado para SEO básico
 - Preparado para agregar paquetes en el futuro
+=======
+# Xolai-Dent---Healthcare-Management-SaaS
+A full-stack SaaS platform tailored for dental health professionals, focused on streamlining scheduling, patient records, and clinic management.
+>>>>>>> 362ccf390678eb922f909fa2c1adeab26c145859
